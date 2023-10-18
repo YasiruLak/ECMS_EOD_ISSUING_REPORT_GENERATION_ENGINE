@@ -1,0 +1,13 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(ô¤Òð
+6python:S125"Remove this commented out code.(Ž•–…
+Opython:S1172	"2Remove the unused function parameter "merchantid".(èŸ¥ÿøÿÿÿÿ
+ppython:S117"ZRename this local variable "mainQuery" to match the regular expression ^[_a-z][a-z0-9_]*$.(·Úëm
+xpython:S117"\Rename this local variable "secondQuery" to match the regular expression ^[_a-z][a-z0-9_]*$.(ê¦Éáþÿÿÿÿ
+ypython:S1542	"\Rename function "getDataFromStatementID" to match the regular expression ^[a-z_][a-z0-9_]*$.(èŸ¥ÿøÿÿÿÿ
+Lpython:S1481"/Remove the unused local variable "secondQuery".(ê¦Éáþÿÿÿÿ
+6python:S125"Remove this commented out code.(“ÚóÛ
+tpython:S117€"\Rename this parameter "StatementEndDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(˜áì§
+vpython:S117€"^Rename this parameter "statementStartDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(˜áì§
+tpython:S1542€"[Rename function "getDataToSubReportTWo" to match the regular expression ^[a-z_][a-z0-9_]*$.(˜áì§
+lpython:S1542œ"SRename function "getSubReport1" to match the regular expression ^[a-z_][a-z0-9_]*$.(œð—¯

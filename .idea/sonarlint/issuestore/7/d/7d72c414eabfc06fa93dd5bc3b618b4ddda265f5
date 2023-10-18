@@ -1,0 +1,23 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(ô¤Òğ
+6python:S125"Remove this commented out code.(•–…
+wpython:S1542"ZRename function "getDataFromMainQuery" to match the regular expression ^[a-z_][a-z0-9_]*$.(÷¼Á´şÿÿÿÿ
+upython:S117+"YRename this parameter "merchantCusNo" to match the regular expression ^[_a-z][a-z0-9_]*$.(¿°Ğ°ùÿÿÿÿ
+rpython:S117+"VRename this parameter "startEodID" to match the regular expression ^[_a-z][a-z0-9_]*$.(¿°Ğ°ùÿÿÿÿ
+}python:S1542+"`Rename function "getDataToCustomerStatement" to match the regular expression ^[a-z_][a-z0-9_]*$.(¿°Ğ°ùÿÿÿÿ
+Vpython:S1172•"8Remove the unused function parameter "statementEndDate".(¤ªàøÿÿÿÿ
+Xpython:S1172•":Remove the unused function parameter "statementStartDate".(¤ªàøÿÿÿÿ
+tpython:S117Ç"\Rename this local variable "adjusmentDs" to match the regular expression ^[_a-z][a-z0-9_]*$.(Å‡
+ypython:S117•"\Rename this parameter "statementEndDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(¤ªàøÿÿÿÿ
+{python:S117•"^Rename this parameter "statementStartDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(¤ªàøÿÿÿÿ
+}python:S1542•"_Rename function "getDataforAdjusmentReport" to match the regular expression ^[a-z_][a-z0-9_]*$.(¤ªàøÿÿÿÿ
+<python:S125–"Remove this commented out code.(ªÆÿÀıÿÿÿÿ
+<python:S125Ä"Remove this commented out code.(Ø‚‡ıÿÿÿÿ
+:python:S3457Ê"Remove this unused argument.(ÙºÊ…şÿÿÿÿ
+Xpython:S1172Ï":Remove the unused function parameter "statementStartDate".(“ÿû™şÿÿÿÿ
+Vpython:S1172Ï"8Remove the unused function parameter "statementEndDate".(“ÿû™şÿÿÿÿ
+ypython:S117Ï"\Rename this parameter "statementEndDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(“ÿû™şÿÿÿÿ
+{python:S117Ï"^Rename this parameter "statementStartDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(“ÿû™şÿÿÿÿ
+rpython:S1542Ï"TRename function "getDataforFees" to match the regular expression ^[a-z_][a-z0-9_]*$.(“ÿû™şÿÿÿÿ
+7python:S125â"Remove this commented out code.(£•‘ÿ
+:python:S3457è"Remove this unused argument.(Ï€Ãöùÿÿÿÿ

@@ -1,0 +1,29 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(ô¤Òğ
+6python:S125"Remove this commented out code.(•–…
+ypython:S117"bRename this local variable "MerchantCusID_sql" to match the regular expression ^[_a-z][a-z0-9_]*$.(µÀ‡ª
+{python:S117!"_Rename this local variable "StartEodID_sql" to match the regular expression ^[_a-z][a-z0-9_]*$.(§Ó…¦ûÿÿÿÿ
+}python:S117"aRename this local variable "StatementEndDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(¬±ÌÙşÿÿÿÿ
+xpython:S117"\Rename this local variable "StatementID" to match the regular expression ^[_a-z][a-z0-9_]*$.(ç¿×Ùşÿÿÿÿ
+upython:S117"YRename this local variable "billAdd1" to match the regular expression ^[_a-z][a-z0-9_]*$.(Âİ–şÿÿÿÿ
+upython:S117"YRename this local variable "billAdd2" to match the regular expression ^[_a-z][a-z0-9_]*$.(ø«¥Şüÿÿÿÿ
+upython:S117"YRename this local variable "billAdd3" to match the regular expression ^[_a-z][a-z0-9_]*$.(–ëˆ¢ıÿÿÿÿ
+‚python:S117"fRename this local variable "mainquaryforConditons" to match the regular expression ^[_a-z][a-z0-9_]*$.(»ˆ›ëüÿÿÿÿ
+spython:S117"\Rename this local variable "merchantDes" to match the regular expression ^[_a-z][a-z0-9_]*$.(¤·ßÓ
+qpython:S117"[Rename this local variable "merchantID" to match the regular expression ^[_a-z][a-z0-9_]*$.(ŒŸ°o
+python:S117"cRename this local variable "statementStartDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(Íƒìóşÿÿÿÿ
+ppython:S1542
+"SRename function "getdataFromId" to match the regular expression ^[a-z_][a-z0-9_]*$.(‹†»œùÿÿÿÿ
+Ipython:S1481",Remove the unused local variable "billAdd3".(–ëˆ¢ıÿÿÿÿ
+Mpython:S1481"5Remove the unused local variable "MerchantCusID_sql".(µÀ‡ª
+Npython:S1481"/Remove the unused local variable "merchantDes".(¤·ßÓ8ûË’Äö0
+Qpython:S1481"4Remove the unused local variable "StatementEndDate".(¬±ÌÙşÿÿÿÿ
+Lpython:S1481"/Remove the unused local variable "StatementID".(ç¿×Ùşÿÿÿÿ
+Opython:S1481!"2Remove the unused local variable "StartEodID_sql".(§Ó…¦ûÿÿÿÿ
+Ipython:S1481",Remove the unused local variable "billAdd1".(Âİ–şÿÿÿÿ
+Ipython:S1481",Remove the unused local variable "billAdd2".(ø«¥Şüÿÿÿÿ
+6python:S125Q"Remove this commented out code.(¼¬ç–
+;python:S125T"Remove this commented out code.(ŠÎßÿÿÿÿÿ
+7python:S125í"Remove this commented out code.(Õõ©Ó
+7python:S125õ"Remove this commented out code.(Çû»¯
+7python:S125•"Remove this commented out code.(€Ÿœ³

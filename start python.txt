@@ -1,0 +1,16 @@
+1.create virtual environment
+python -m venv venv
+2. activate venv
+.\venv\Scripts\activate
+
+3.
+python -m pip install flask
+
+python app.py
+
+# log manager
+app.logger.debug('This is a debug message')
+app.logger.info('This is an info message')
+app.logger.warning('This is a warning message')
+app.logger.error('This is an error message')
+app.logger.critical('This is a critical message')

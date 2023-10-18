@@ -1,0 +1,6 @@
+
+jpython:S1192N"RDefine a constant instead of duplicating this literal 'Total Outstanding' 3 times.(”¯å•
+_python:S2208"GImport only needed names or import the module and then use its members.(Ç“ª
+|python:S1542"_Rename function "genarateCustomerStatement" to match the regular expression ^[a-z_][a-z0-9_]*$.(–·¶Æûÿÿÿÿ
+?python:S1481$"'Remove the unused local variable "row".(º¹±Æ
+rpython:S3776Ö"TRefactor this function to reduce its Cognitive Complexity from 17 to the 15 allowed.(¢¥êÿÿÿÿÿ

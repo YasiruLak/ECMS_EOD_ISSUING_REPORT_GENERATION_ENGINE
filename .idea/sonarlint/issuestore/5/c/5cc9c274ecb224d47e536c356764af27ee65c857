@@ -1,0 +1,4 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(Ñ¹€µ
+dpython:S2208"GImport only needed names or import the module and then use its members.(ò¢îØÿÿÿÿÿ
+vpython:S1542"_Rename function "genarateMerchantStatement" to match the regular expression ^[a-z_][a-z0-9_]*$.(¡ëÙ~

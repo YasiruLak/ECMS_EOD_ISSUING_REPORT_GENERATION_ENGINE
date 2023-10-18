@@ -1,0 +1,12 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(ô¤Òğ
+_python:S2208"GImport only needed names or import the module and then use its members.(Ğœ£Ù
+6python:S125"Remove this commented out code.(•–…
+rpython:S1542	"ZRename function "getdataFromMainQuery" to match the regular expression ^[a-z_][a-z0-9_]*$.(ƒÀ 
+;python:S125f"Remove this commented out code.(‚œ«ÿÿÿÿÿ
+opython:S1542o"WRename function "getBillingAddress" to match the regular expression ^[a-z_][a-z0-9_]*$.(ÆŠ”â
+rpython:S117‰"URename this parameter "accountNo" to match the regular expression ^[_a-z][a-z0-9_]*$.(œì½İùÿÿÿÿ
+qpython:S117‰"TRename this parameter "endEodID" to match the regular expression ^[_a-z][a-z0-9_]*$.(œì½İùÿÿÿÿ
+spython:S117‰"VRename this parameter "startEodID" to match the regular expression ^[_a-z][a-z0-9_]*$.(œì½İùÿÿÿÿ
+zpython:S1542‰"\Rename function "getDatafromSecondQuery" to match the regular expression ^[a-z_][a-z0-9_]*$.(œì½İùÿÿÿÿ
+upython:S1542¡"\Rename function "getDataForSubReportTwo" to match the regular expression ^[a-z_][a-z0-9_]*$.(¿ã×Ñ

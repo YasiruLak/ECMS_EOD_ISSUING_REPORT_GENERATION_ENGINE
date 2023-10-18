@@ -1,0 +1,8 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(Ç“ª
+Jpython:S1172"2Remove the unused function parameter "merchantid".(ßÁ’
+jpython:S117"SRename this parameter "eodDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(ßÁ’
+npython:S1542"VRename function "generateFilePath" to match the regular expression ^[a-z_][a-z0-9_]*$.(ßÁ’
+python:S1871"bEither merge this branch with the identical one on line "27" or change one of the implementations.(¥ñ®Éşÿÿÿÿ
+npython:S15423"WRename function "cardNumberMasking" to match the regular expression ^[a-z_][a-z0-9_]*$.(šå‹`
+;python:S1255"Remove this commented out code.(¯şœªşÿÿÿÿ

@@ -1,0 +1,26 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(÷ÖÖ©
+ypython:S117"]Rename this local variable "BottomMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(Ë—©ÿÿÿÿÿ
+~python:S117-"bRename this local variable "HeadingBackground" to match the regular expression ^[_a-z][a-z0-9_]*$.(‹ÌâÂşÿÿÿÿ
+rpython:S117"[Rename this local variable "LeftMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(Ä¥¥
+xpython:S117"\Rename this local variable "RightMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(€Õõöşÿÿÿÿ
+}python:S117"aRename this local variable "StatementEndDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(¬±ÌÙşÿÿÿÿ
+qpython:S117"ZRename this local variable "TopMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(‚¾¼
+opython:S117"SRename this parameter "eodDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(ô¤½¬úÿÿÿÿ
+tpython:S117"]Rename this local variable "filePathDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(…Òï‰
+spython:S117"\Rename this local variable "merchantDes" to match the regular expression ^[_a-z][a-z0-9_]*$.(¤·ßÓ
+tpython:S1174"]Rename this local variable "merchantName" to match the regular expression ^[_a-z][a-z0-9_]*$.(ø‹
+python:S117"cRename this local variable "statementStartDate" to match the regular expression ^[_a-z][a-z0-9_]*$.(Íƒìóşÿÿÿÿ
+ppython:S117"YRename this local variable "totalAdj" to match the regular expression ^[_a-z][a-z0-9_]*$.(•é±
+python:S117"cRename this local variable "totalAdjCommission" to match the regular expression ^[_a-z][a-z0-9_]*$.(óüÀŸşÿÿÿÿ
+zpython:S117"^Rename this local variable "totalAdjGross" to match the regular expression ^[_a-z][a-z0-9_]*$.(óèÖÅşÿÿÿÿ
+opython:S117ƒ"WRename this local variable "ttlAdj" to match the regular expression ^[_a-z][a-z0-9_]*$.(¼ÄÀÈ
+}python:S117†"`Rename this local variable "ttlAdjCommision" to match the regular expression ^[_a-z][a-z0-9_]*$.(ÌÒ—Îøÿÿÿÿ
+tpython:S117€"\Rename this local variable "ttlAdjGross" to match the regular expression ^[_a-z][a-z0-9_]*$.(ü ¶
+wpython:S1542"ZRename function "genarateStatementPDF" to match the regular expression ^[a-z_][a-z0-9_]*$.(ô¤½¬úÿÿÿÿ
+Bpython:S1481#"*Remove the unused local variable "styles".(ûïÙ»
+Rpython:S1481"9Remove the unused local variable "merchant_group_header".(’‚ñú
+Kpython:S1481Ã"-Remove the unused local variable "reportone".(ò¨ûÛùÿÿÿÿ
+qpython:S3776"TRefactor this function to reduce its Cognitive Complexity from 66 to the 15 allowed.(ô¤½¬úÿÿÿÿ
+<python:S125"Remove this commented out code.(é²Ü–øÿÿÿÿ
+lpython:S1542•"SRename function "addPageNumber" to match the regular expression ^[a-z_][a-z0-9_]*$.(”·…°

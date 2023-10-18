@@ -1,0 +1,27 @@
+
+_python:S2208"GImport only needed names or import the module and then use its members.(Ñ¹€µ
+_python:S2208"GImport only needed names or import the module and then use its members.(÷ÖÖ©
+_python:S2208	"GImport only needed names or import the module and then use its members.(Ç“ª
+ypython:S117"]Rename this local variable "BottomMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(Ë—©ÿÿÿÿÿ
+~python:S117+"bRename this local variable "HeadingBackground" to match the regular expression ^[_a-z][a-z0-9_]*$.(‹ÌâÂşÿÿÿÿ
+rpython:S117"[Rename this local variable "LeftMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(Ä¥¥
+xpython:S117"\Rename this local variable "RightMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(€Õõöşÿÿÿÿ
+qpython:S117"ZRename this local variable "TopMargin" to match the regular expression ^[_a-z][a-z0-9_]*$.(‚¾¼
+tpython:S1172"]Rename this local variable "merchantName" to match the regular expression ^[_a-z][a-z0-9_]*$.(Ä”¸«
+ppython:S117"YRename this local variable "totalAdj" to match the regular expression ^[_a-z][a-z0-9_]*$.(Šâ™Š
+zpython:S117"cRename this local variable "totalAdjCommission" to match the regular expression ^[_a-z][a-z0-9_]*$.(ï—Û¥
+zpython:S117"^Rename this local variable "totalAdjGross" to match the regular expression ^[_a-z][a-z0-9_]*$.(›ë–Ÿşÿÿÿÿ
+opython:S117©"WRename this local variable "ttlAdj" to match the regular expression ^[_a-z][a-z0-9_]*$.(¼ÄÀÈ
+}python:S117¬"`Rename this local variable "ttlAdjCommision" to match the regular expression ^[_a-z][a-z0-9_]*$.(ÌÒ—Îøÿÿÿÿ
+tpython:S117¦"\Rename this local variable "ttlAdjGross" to match the regular expression ^[_a-z][a-z0-9_]*$.(ü ¶
+„python:S1542"gRename function "genarateMerchantCustomerStatement" to match the regular expression ^[a-z_][a-z0-9_]*$.(Óäüÿÿÿÿ
+qpython:S3776"TRefactor this function to reduce its Cognitive Complexity from 45 to the 15 allowed.(Óäüÿÿÿÿ
+Bpython:S1255"Remove this commented out code.(™åÃ§ùÿÿÿÿ8óÉÆÄö0
+<python:S125µ"Remove this commented out code.(Á˜’¦ÿÿÿÿÿ
+Hpython:S1656†"/Remove or correct this useless self-assignment.(‡Óô
+Mpython:S1656‘"/Remove or correct this useless self-assignment.(“üôúÿÿÿÿ
+<python:S125À"Remove this commented out code.(¦ÙŞ®ùÿÿÿÿ
+lpython:S1542²"SRename function "addPageNumber" to match the regular expression ^[a-z_][a-z0-9_]*$.(”·…°
+Gpython:S1172¸".Remove the unused function parameter "my_doc".(öØËÜ
+npython:S1542¸"URename function "addCustomString" to match the regular expression ^[a-z_][a-z0-9_]*$.(öØËÜ
+Apython:S5603¸"(Remove this unused function declaration.(öØËÜ
