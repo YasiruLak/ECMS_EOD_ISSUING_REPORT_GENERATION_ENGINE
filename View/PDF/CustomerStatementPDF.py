@@ -24,10 +24,10 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
         end = count
         batchSize = 50
 
-        # if batchSize > count:
-        #     end = count
-        # else:
-        #     end = batchSize
+        if batchSize > count:
+            end = count
+        else:
+            end = batchSize
 
         df2 = Dao.getStatementIdsForStatementFileCreation(startEodStatus, start, end)
 
