@@ -34,7 +34,7 @@ def totalStmtGenerationCount(startingEodStatus):
 
 def getStatementIdsForStatementFileCreation(startEodStatus, start, end):
 
-    global status
+    global status, df2
 
     if startEodStatus == 'INIT':
         status = 0
@@ -46,129 +46,81 @@ def getStatementIdsForStatementFileCreation(startEodStatus, start, end):
     try:
 
         query = ''' SELECT B.* 
-                FROM 
-                (SELECT ROWNUM RN, 
-                    A.* 
-                  FROM 
-                    (SELECT DISTINCT CAC.ACCOUNTNO, 
-                      BLS.*, 
-                      CAC.ISPRIMARY, 
-                      (SELECT CARDCATEGORYCODE FROM card WHERE cardnumber =CAC.CARDNUMBER 
-                      ) AS CARDCATEGORYCODE, 
-                      (SELECT MESSAGEONSTMT 
-                      FROM ALLOCATIONMESSAGE , 
-                        TRIGGERCARDS 
-                      WHERE TRIGGERCARDS.CARDNO           = BS.CARDNO 
-                      AND TRIGGERCARDS.LASTTRIGGERPOINT   = ALLOCATIONMESSAGE.TRIGGERPOINT 
-                      AND ALLOCATIONMESSAGE.TRIGGERPOINT IN('O3SD','O2SD','O4SD') 
-                      AND ALLOCATIONMESSAGE.STATUS        ='ACT' 
-                      )              AS TRIGGERMSG, 
-                      BS.STATEMENTID AS stmtid, 
-                      bs.creditlimit, 
-                      BS.STATEMENTGENERATEDSTATUS, 
-                      NVL(bs.PURCHASES,0.00)    AS PURCHASES, 
-                      NVL(bs.DRADJUSTMENT,0.00) AS DRADJUSTMENT, 
-                      NVL(bs.CRADJUSTMENT,0.00) AS CRADJUSTMENT, 
-                      NVL(bs.CASHADVANCE,0.00)  AS CASHADVANCE, 
-                      NVL(bs.INTEREST,0.00)     AS INTEREST, 
-                      NVL(bs.CHARGES,0.00)      AS CHARGES, 
-                      BS.STARTEODID, 
-                      BS.ENDEODID, 
-                      CA.STATEMENTSENTOPTION, 
-                          (SELECT mobilephoneno 
-                          FROM CARDCUSTOMERDETAILS 
-                          WHERE customerid = cac.customerid 
-                          ) 
-                         AS MOBILENO 
-                    FROM BILLINGSTATEMENT BS, 
-                      BILLINGLASTSTATEMENTSUMMARY BLS, 
-                      CARDACCOUNT CA, 
-                      CARDACCOUNTCUSTOMER CAC 
-                    WHERE BS.STATEMENTGENERATEDSTATUS = :status
-                    AND BS.CARDNO                     =BLS.CARDNO 
-                    AND BS.ACCOUNTNO                  = CA.ACCOUNTNO 
-                   AND CAC.CARDNUMBER                =BS.CARDNO 
-                    ORDER BY CAC.ACCOUNTNO ASC 
-                    ) A 
-                  ) B 
-                WHERE B.RN BETWEEN ''' + str(start) + ''' AND ''' + str(end)
+                        FROM 
+                        (SELECT ROWNUM RN, 
+                            A.* 
+                          FROM 
+                            (SELECT DISTINCT CAC.ACCOUNTNO, 
+                              BLS.*, 
+                              CAC.ISPRIMARY, 
+                              (SELECT CARDCATEGORYCODE FROM card WHERE cardnumber =CAC.CARDNUMBER 
+                              ) AS CARDCATEGORYCODE, 
+                              (SELECT MESSAGEONSTMT 
+                              FROM ALLOCATIONMESSAGE , 
+                                TRIGGERCARDS 
+                              WHERE TRIGGERCARDS.CARDNO           = BS.CARDNO 
+                              AND TRIGGERCARDS.LASTTRIGGERPOINT   = ALLOCATIONMESSAGE.TRIGGERPOINT 
+                              AND ALLOCATIONMESSAGE.TRIGGERPOINT IN('O3SD','O2SD','O4SD') 
+                              AND ALLOCATIONMESSAGE.STATUS        ='ACT' 
+                              )              AS TRIGGERMSG, 
+                              BS.STATEMENTID AS stmtid, 
+                              bs.creditlimit, 
+                              BS.STATEMENTGENERATEDSTATUS, 
+                              NVL(bs.PURCHASES,0.00)    AS PURCHASES, 
+                              NVL(bs.DRADJUSTMENT,0.00) AS DRADJUSTMENT, 
+                              NVL(bs.CRADJUSTMENT,0.00) AS CRADJUSTMENT, 
+                              NVL(bs.CASHADVANCE,0.00)  AS CASHADVANCE, 
+                              NVL(bs.INTEREST,0.00)     AS INTEREST, 
+                              NVL(bs.CHARGES,0.00)      AS CHARGES, 
+                              BS.STARTEODID, 
+                              BS.ENDEODID, 
+                              CA.STATEMENTSENTOPTION, 
+                              ( 
+                              CASE 
+                                WHEN BS.CARDCATEGORYCODE IN ('M', 'A', 'CO') 
+                                THEN 
+                                  (SELECT mobileno 
+                                  FROM cardmaincustomerdetail 
+                                  WHERE customerid = cac.customerid 
+                                  ) 
+                                WHEN BS.CARDCATEGORYCODE = 'F' 
+                                THEN 
+                                  (SELECT mobileno FROM cardfdcustomerdetail WHERE customerid = cac.customerid 
+                                  ) 
+                                WHEN BS.CARDCATEGORYCODE = 'E' 
+                               THEN 
+                                 (SELECT contactnumbersmobile 
+                                  FROM cardestcustomerdetails 
+                                  WHERE customerid = cac.customerid 
+                                 ) 
+                              END) AS MOBILENO 
+                            FROM BILLINGSTATEMENT BS, 
+                              BILLINGLASTSTATEMENTSUMMARY BLS, 
+                              CARDACCOUNT CA, 
+                              CARDACCOUNTCUSTOMER CAC 
+                            WHERE BS.STATEMENTGENERATEDSTATUS = :status
+                            AND BS.CARDNO                     =BLS.CARDNO 
+                            AND BS.ACCOUNTNO                  = CA.ACCOUNTNO 
+                           AND CAC.CARDNUMBER                =BS.CARDNO 
+                            ORDER BY CAC.ACCOUNTNO ASC 
+                            ) A 
+                          ) B 
+                        WHERE B.RN BETWEEN ''' + str(start) + ''' AND ''' + str(end)
 
+        df2 = pd.read_sql(query, con=conEngine(), params={"status": status})
 
-        df = pd.read_sql(query, con=conEngine(), params={"status": status})
-
-        return df
+        return df2
 
     except Exception as err:
         app.logger.error('Error in Statement Generation controller {}'.format(str(err)))
 
 def getdataFromMainQuery(statementid):
-    try:
-        query = '''SELECT
-            b.*
-        FROM
-            (
-                SELECT
-                    ROWNUM rn,
-                    a.*
-                FROM
-                    (
-                        SELECT DISTINCT
-                            cac.accountno,
-                            bls.*,
-                            cac.isprimary,
-                            (
-                                SELECT
-                                    cardcategorycode
-                                FROM
-                                    card
-                                WHERE
-                                    cardnumber = cac.cardnumber
-                            )                          AS cardcategorycode,
-                            (
-                                SELECT
-                                    messageonstmt
-                                FROM
-                                    allocationmessage,
-                                    triggercards
-                                WHERE
-                                        triggercards.cardno = bs.cardno
-                                    AND triggercards.lasttriggerpoint = allocationmessage.triggerpoint
-                                    AND allocationmessage.triggerpoint IN ( 'O3SD', 'O2SD', 'O4SD' )
-                                    AND allocationmessage.status = 'ACT'
-                            )                          AS triggermsg,
-                            bs.statementid             AS stmtid,
-                            bs.creditlimit,
-                            bs.statementgeneratedstatus,
-                            nvl(bs.purchases, 0.00)    AS purchases,
-                            nvl(bs.dradjustment, 0.00) AS dradjustment,
-                            nvl(bs.cradjustment, 0.00) AS cradjustment,
-                            nvl(bs.cashadvance, 0.00)  AS cashadvance,
-                            nvl(bs.interest, 0.00)     AS interest,
-                            nvl(bs.charges, 0.00)      AS charges,
-                            bs.starteodid,
-                            bs.endeodid,
-                            ca.statementsentoption,
-                            (SELECT mobilephoneno 
-                          FROM CARDCUSTOMERDETAILS 
-                          WHERE customerid = cac.customerid 
-                          ) 
-                         AS MOBILENO 
-                        FROM
-                            billingstatement            bs,
-                            billinglaststatementsummary bls,
-                            cardaccount                 ca,
-                            cardaccountcustomer         cac
-                        WHERE
-                                bs.statementgeneratedstatus = 0
-                            AND bs.cardno = bls.cardno
-                            AND bs.accountno = ca.accountno
-                            AND cac.cardnumber = bs.cardno
-                        ORDER BY
-                            cac.accountno ASC
-                    ) a
-            ) b WHERE b.stmtid =:statementid'''
 
-        df = pd.read_sql(query, con=conEngine(), params={"statementid": statementid})
+    global df
+    try:
+        query = '''SELECT b.* FROM ( SELECT ROWNUM rn, a.* FROM ( SELECT DISTINCT cac.accountno, bls.*, cac.isprimary, ( SELECT cardcategorycode FROM card WHERE cardnumber = cac.cardnumber )                          AS cardcategorycode, ( SELECT messageonstmt FROM allocationmessage, triggercards WHERE triggercards.cardno = bs.cardno AND triggercards.lasttriggerpoint = allocationmessage.triggerpoint AND allocationmessage.triggerpoint IN ( 'O3SD', 'O2SD', 'O4SD' ) AND allocationmessage.status = 'ACT' ) AS triggermsg, bs.statementid AS stmtid, bs.creditlimit, bs.statementgeneratedstatus, nvl(bs.purchases, 0.00)    AS purchases, nvl(bs.dradjustment, 0.00) AS dradjustment, nvl(bs.cradjustment, 0.00) AS cradjustment, nvl(bs.cashadvance, 0.00)  AS cashadvance, nvl(bs.interest, 0.00) AS interest, nvl(bs.charges, 0.00) AS charges, bs.starteodid, bs.endeodid, ca.statementsentoption, ( CASE WHEN bs.cardcategorycode IN ( 'M', 'A', 'CO' ) THEN ( SELECT mobileno FROM cardmaincustomerdetail WHERE customerid = cac.customerid ) WHEN bs.cardcategorycode = 'F' THEN ( SELECT mobileno FROM cardfdcustomerdetail WHERE customerid = cac.customerid ) WHEN bs.cardcategorycode = 'E' THEN ( SELECT contactnumbersmobile FROM cardestcustomerdetails WHERE customerid = cac.customerid ) END ) AS mobileno FROM billingstatement bs, billinglaststatementsummary bls, cardaccount ca, cardaccountcustomer cac WHERE bs.statementgeneratedstatus = 0 AND bs.cardno = bls.cardno AND bs.accountno = ca.accountno AND cac.cardnumber = bs.cardno ORDER BY cac.accountno ASC ) a ) b WHERE b.stmtid = :statementid'''
+
+        df = pd.read_sql(query, con=conEngine(), params={"statementid": (format(str(statementid)))})
 
     except Exception as err:
         app.logger.error('Error while getting data from main query {}'.format(str(err)))
@@ -178,13 +130,14 @@ def getdataFromMainQuery(statementid):
 
 def getBillingAddress(cardcategorycode, cardno):
     global name, address1, address2, address3
+    app.logger.info(cardno)
     try:
         if cardcategorycode == CARD_CATEGORY_MAIN or cardcategorycode == CARD_CATEGORY_CO_BRANDED or cardcategorycode == CARD_CATEGORY_AFFINITY:
-            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDCUSTOMERDETAILS CMC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CMC.CUSTOMERID and CAC.CARDNUMBER = :cardno '''
+            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDMAINCUSTOMERDETAIL   CMC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CMC.CUSTOMERID and CAC.CARDNUMBER = :cardno '''
         elif cardcategorycode == CARD_CATEGORY_ESTABLISHMENT:
-            query = '''select NAMEOFTHECOMPANY,BUSINESSADDRESS1,BUSINESSADDRESS2, BUSINESSADDRESS3 from CARDCUSTOMERDETAILS CEC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CEC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
+            query = '''select NAMEOFTHECOMPANY,BUSINESSADDRESS1,BUSINESSADDRESS2, BUSINESSADDRESS3 from CARDMAINCUSTOMERDETAIL   CEC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CEC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
         elif cardcategorycode == CARD_CATEGORY_FD:
-            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDCUSTOMERDETAILS CFC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CFC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
+            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDMAINCUSTOMERDETAIL   CFC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CFC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
 
         df = pd.read_sql(query, con=conEngine(), params={"cardno": cardno})
         if cardcategorycode == 'E':
@@ -598,3 +551,4 @@ def updateErrorFileStatus(statementid):
 
     except Exception as err:
         app.logger.error('Error in customer controller {}'.format(str(err)))
+

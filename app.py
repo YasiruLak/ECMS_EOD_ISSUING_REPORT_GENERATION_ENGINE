@@ -26,15 +26,15 @@ info_handler.setLevel(logging.INFO)
 info_handler.setFormatter(formatter)
 app.logger.addHandler(info_handler)
 
-# if __name__ == '__main__':
-#     from Controller import *
-#     logger.debug("Start Issuing Statement Generation Module Version : " + VERSION)
-#     serve(app, host="0.0.0.0", port=6000, threads=5)
-#     # app.run()
-
 if __name__ == '__main__':
     from Controller import *
-    app.logger.debug("Start Issuing Statement Generation Module Version")
-    app.run()
+    app.logger.debug("Start Issuing Statement Generation Module")
+    serve(app, host="0.0.0.0", port=5000, threads=5)
+    # app.run()
+
+# if __name__ == '__main__':
+#     from Controller import *
+#     app.logger.debug("Start Issuing Statement Generation Module Version")
+#     app.run()
 
 

@@ -21,22 +21,26 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
         successno = 0
         errorno = 0
         start = 0
-        end = 0
+        end = count
         batchSize = 50
 
-        if batchSize > count:
-            end = count
-        else:
-            end = batchSize
+        # if batchSize > count:
+        #     end = count
+        # else:
+        #     end = batchSize
 
         df2 = Dao.getStatementIdsForStatementFileCreation(startEodStatus, start, end)
 
-        for ind in df2.index:
-            errorcount = errorno
-            successcount = successno
-            statementid = df2['stmtid'][ind]
-            successno, errorno = genarateCustomerStatement(statementid, eodDate, errorcount, successcount,
-                                                           startEodStatus, start, end)
+        if df2.size == 0:
+            successno = 0
+            errorno = 0
+        else:
+            for ind in df2.index:
+                errorcount = errorno
+                successcount = successno
+                statementid = df2['stmtid'][ind]
+                successno, errorno = genarateCustomerStatement(statementid, eodDate, errorcount, successcount,
+                                                               startEodStatus, start, end)
 
     except Exception as err:
         app.logger.error('Error in Customer Statement Generate controller {}'.format(str(err)))
@@ -46,6 +50,7 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
 
 def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, startEodStatus, start, end):
     try:
+        app.logger.info(statementid)
         # get data from db
         df1 = CustomerStatementDao.getdataFromMainQuery(statementid)
         # df1 = CustomerStatementDao.getStatementIdsForStatementFileCreation(startEodStatus, start, end)
@@ -81,7 +86,7 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         address_row_2 = shapes.Drawing(row_width, 10)
         address_row_3 = shapes.Drawing(row_width, 8)
 
-        if address1 is None:
+        if name is None:
             name = ''
         else:
             name = name
@@ -507,12 +512,12 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         doc.build(elements)
         app.logger.info('successfully created ' + filename)
         successcount += 1
-        Dao.updateStatus(statementid)
+        Dao.updateStatus(format(str(statementid)))
 
     except Exception as err:
         app.logger.error('Error while generating  Customer Statement PDF  {}'.format(str(err)))
         errorcount += 1
-        Dao.updateErrorFileStatus(statementid)
+        Dao.updateErrorFileStatus(format(str(statementid)))
 
     return successcount, errorcount
 
@@ -652,6 +657,8 @@ def sub_report_one(df4, elements, row_width, df2):
             # $F{CRDR}.equals("CR")?"CR":" "
             if df4['crdr'][ind] == 'CR':
                 addon = " CR"
+            else:
+                addon = " "
             string_transaction_amount = shapes.String(6.5 * inch, 0, str(df4['amount'][ind]) + ' ' + addon,
                                                       fontName="Helvetica",
                                                       fontSize=8)

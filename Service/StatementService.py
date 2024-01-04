@@ -23,7 +23,6 @@ def genarateCustomerStatement(accNo, eodDate, statementid):
 
         if os_name.upper() == 'WINDOWS':
             filepath = STATEMENT_FILE_PATH + '\\' + accNo + '\\'
-
         else:
             filepath = STATEMENT_FILE_PATH + '/' + accNo + '/'
 
@@ -31,9 +30,9 @@ def genarateCustomerStatement(accNo, eodDate, statementid):
         path = os.path.join(filepath)
         if not os.path.exists(path):
             os.makedirs(path)
-            app.logger.info('directory was created')
+            app.logger.info(accNo + ': directory was created')
         else:
-            app.logger.info('directory already exists.')
+            app.logger.info(accNo + ' :directory already exists.')
 
         filename = filepath + str(statementid) + ".pdf"
         # app.logger.info('successfully created ' + filename)
