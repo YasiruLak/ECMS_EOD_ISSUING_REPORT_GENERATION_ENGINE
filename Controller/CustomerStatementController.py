@@ -6,7 +6,7 @@ from flask import jsonify
 
 @app.route('/eod-engine/customerStatement', methods=['POST'])
 def generateCustomerStatementController():
-    app.logger.info('Request Recived')
+    # app.logger.info('Request Recived')
     global successno, errorno
 
     eodDate = request.args.get("eodDate")

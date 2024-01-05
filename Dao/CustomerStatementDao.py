@@ -130,7 +130,7 @@ def getdataFromMainQuery(statementid):
 
 def getBillingAddress(cardcategorycode, cardno):
     global name, address1, address2, address3
-    app.logger.info(cardno)
+    # app.logger.info(cardno)
     try:
         if cardcategorycode == CARD_CATEGORY_MAIN or cardcategorycode == CARD_CATEGORY_CO_BRANDED or cardcategorycode == CARD_CATEGORY_AFFINITY:
             query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDMAINCUSTOMERDETAIL   CMC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CMC.CUSTOMERID and CAC.CARDNUMBER = :cardno '''

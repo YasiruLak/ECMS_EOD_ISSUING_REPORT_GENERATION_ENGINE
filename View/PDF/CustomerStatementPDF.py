@@ -24,12 +24,14 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
         end = count
         batchSize = 50
 
-        if batchSize > count:
-            end = count
-        else:
-            end = batchSize
+        # if batchSize > count:
+        #     end = count
+        # else:
+        #     end = batchSize
 
         df2 = Dao.getStatementIdsForStatementFileCreation(startEodStatus, start, end)
+
+        app.logger.info('Statement Count {} ' + format(str(count)))
 
         if df2.size == 0:
             successno = 0
@@ -50,7 +52,7 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
 
 def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, startEodStatus, start, end):
     try:
-        app.logger.info(statementid)
+        # app.logger.info(statementid)
         # get data from db
         df1 = CustomerStatementDao.getdataFromMainQuery(statementid)
         # df1 = CustomerStatementDao.getStatementIdsForStatementFileCreation(startEodStatus, start, end)
@@ -279,6 +281,9 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
 
             if df2['crdr'][ind] == 'CR':
                 addon = " CR"
+            else:
+                addon = " "
+
             string_transaction_amount = shapes.String(6.5 * inch, 0, str(df2['transactionamount'][ind]) + addon,
                                                       fontName="Helvetica",
                                                       fontSize=8)
@@ -515,7 +520,7 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         Dao.updateStatus(format(str(statementid)))
 
     except Exception as err:
-        app.logger.error('Error while generating  Customer Statement PDF  {}'.format(str(err)))
+        app.logger.error('Error while generating  Customer Statement PDF  {}  ' + format(str(statementid)).format(str(err)))
         errorcount += 1
         Dao.updateErrorFileStatus(format(str(statementid)))
 
@@ -529,7 +534,7 @@ def card_number_masking(card_number):
         masked_cardnumber = card_number[:START_INDEX] + pattern + card_number[END_INDEX:]
 
     except Exception as err:
-        app.logger.error('Error while masking card number  {}'.format(str(err)))
+        app.logger.error('Error while masking card number  {}' + format(str(masked_cardnumber)).format(str(err)))
     return masked_cardnumber
 
 
