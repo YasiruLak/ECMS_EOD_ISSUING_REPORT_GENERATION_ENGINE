@@ -524,8 +524,6 @@ def updateStatus(statementid):
         cursor.close()
         con.close()
 
-        return "1"
-
     except Exception as err:
         app.logger.error('Error in customer controller {}'.format(str(err)))
 

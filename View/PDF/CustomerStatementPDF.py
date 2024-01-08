@@ -12,7 +12,7 @@ from app import app
 
 
 def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
-    global successno, errorno, start, end, batchSize, temp
+    global successno, errorno, start, end, batchSize, temp, processed_statement_ids
 
     try:
 
@@ -33,20 +33,25 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
 
         app.logger.info('Statement Count {} ' + format(str(count)))
 
-        if df2.size == 0:
-            successno = 0
-            errorno = 0
-        else:
-            for ind in df2.index:
+        processed_statement_ids = set()
+
+        for ind in df2.index:
                 errorcount = errorno
                 successcount = successno
                 statementid = df2['stmtid'][ind]
-                successno, errorno = genarateCustomerStatement(statementid, eodDate, errorcount, successcount,
-                                                               startEodStatus, start, end)
 
+                if statementid not in processed_statement_ids:
+
+                    successno, errorno = genarateCustomerStatement(statementid, eodDate, errorcount, successcount,
+                                                                   startEodStatus, start, end)
+
+                    processed_statement_ids.add(statementid)
+
+        processed_statement_ids.clear()
     except Exception as err:
         app.logger.error('Error in Customer Statement Generate controller {}'.format(str(err)))
 
+    processed_statement_ids.clear()
     return successno, errorno
 
 
