@@ -1,8 +1,16 @@
+import concurrent
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate
+from reportlab.platypus import SimpleDocTemplate, Spacer
 from reportlab.graphics import shapes
+from multiprocessing.dummy import Pool as ThreadPool
+import threading
+from concurrent.futures import ThreadPoolExecutor
+import requests
+import pandas as pd
+from datetime import datetime
 
 import Dao
 import Service
@@ -10,13 +18,15 @@ from Dao import *
 from Dao import CustomerStatementDao
 from app import app
 
+pool = ThreadPool(4)
 
-def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
-    global successno, errorno, start, end, batchSize, temp, processed_statement_ids
+
+def tobeGenerateCustomerStatementFile(eodDate):
+    global successno, errorno, start, end, batchSize, temp, processed_statement_ids, statementenddate, statementstartdate
 
     try:
 
-        count = Dao.totalStmtGenerationCount(startEodStatus)
+        count = Dao.totalStmtGenerationCount()
 
         successno = 0
         errorno = 0
@@ -24,28 +34,21 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
         end = count
         batchSize = 50
 
-        # if batchSize > count:
-        #     end = count
-        # else:
-        #     end = batchSize
+        df2 = Dao.getStatementIdsForStatementFileCreation(start, end)
 
-        df2 = Dao.getStatementIdsForStatementFileCreation(startEodStatus, start, end)
-
-        app.logger.info('Statement Count {} ' + format(str(count)))
+        app.logger.info('Statement Count : ' + format(str(count)))
 
         processed_statement_ids = set()
 
         for ind in df2.index:
-                errorcount = errorno
-                successcount = successno
-                statementid = df2['stmtid'][ind]
+            errorcount = errorno
+            successcount = successno
+            statementid = df2['stmtid'][ind]
 
-                if statementid not in processed_statement_ids:
+            if statementid not in processed_statement_ids:
+                successno, errorno = genarateCustomerStatement(statementid, eodDate, errorcount, successcount)
 
-                    successno, errorno = genarateCustomerStatement(statementid, eodDate, errorcount, successcount,
-                                                                   startEodStatus, start, end)
-
-                    processed_statement_ids.add(statementid)
+                processed_statement_ids.add(statementid)
 
         processed_statement_ids.clear()
     except Exception as err:
@@ -55,7 +58,7 @@ def tobeGenerateCustomerStatementFile(eodDate, startEodStatus):
     return successno, errorno
 
 
-def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, startEodStatus, start, end):
+def genarateCustomerStatement(statementid, eodDate, errorcount, successcount):
     try:
         # app.logger.info(statementid)
         # get data from db
@@ -161,7 +164,14 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         # header_row_1.add(row)
         header_row_2.add(parameter_cardnumber)
 
-        parameter_date = shapes.String(1.5 * inch, 0, str(df1["statementenddate"].values[0])[:10], fontName="Helvetica",
+        # Assuming df1["statementenddate"].values[0] is a string representing a date in the format "YYYY-MM-DD"
+        date_str = str(df1["statementenddate"].values[0])[:10]
+        date_object = datetime.strptime(date_str, "%Y-%m-%d")
+
+        # Format the date as "YYYY/MM/DD"
+        formatted_date = date_object.strftime("%Y/%m/%d")
+
+        parameter_date = shapes.String(1.5 * inch, 0, str(formatted_date), fontName="Helvetica",
                                        fontSize=8)
         header_row_2.add(parameter_date)
 
@@ -174,11 +184,19 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
                                        fontName="Helvetica", fontSize=8)
         header_row_2.add(parameter_date)
 
-        parameter_date = shapes.String(4.5 * inch, 0, str(df1["creditlimit"].values[0]), fontName="Helvetica",
+        credit_limit = round(df1["creditlimit"].values[0], 2)
+
+        parameter_date = shapes.String(4.5 * inch, 0, str(credit_limit), fontName="Helvetica",
                                        fontSize=8)
         header_row_2.add(parameter_date)
 
-        parameter_date = shapes.String(5.5 * inch, 0, str(df1["duedate"].values[0])[:10], fontName="Helvetica",
+        date_str = str(df1["duedate"].values[0])[:10]
+        date_object = datetime.strptime(date_str, "%Y-%m-%d")
+
+        # Format the date as "YYYY/MM/DD"
+        formatted_due_date = date_object.strftime("%Y/%m/%d")
+
+        parameter_date = shapes.String(5.5 * inch, 0, str(formatted_due_date), fontName="Helvetica",
                                        fontSize=8)
         header_row_2.add(parameter_date)
 
@@ -227,7 +245,10 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
 
         outstanding_ttl = df1["purchases"].values[0] + df1["cashadvance"].values[0] + df1["interest"].values[0] + \
                           df1["dradjustment"].values[0] + df1["charges"].values[0]
-        parameter_date = shapes.String(3.5 * inch, 0, str(outstanding_ttl), fontName="Helvetica", fontSize=8)
+
+        outstanding_ttl_rounded = round(outstanding_ttl, 2)
+
+        parameter_date = shapes.String(3.5 * inch, 0, str(outstanding_ttl_rounded), fontName="Helvetica", fontSize=8)
         header_row_4.add(parameter_date)
 
         parameter_date = shapes.String(5 * inch, 0, str(df1["payment"].values[0]), fontName="Helvetica", fontSize=8)
@@ -249,7 +270,7 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
 
         # column header
         column_row = shapes.Drawing(row_width, 15)
-        string_billing_date = shapes.String(0, 0, 'Billing Date', fontName="Helvetica-Bold", fontSize=8)
+        string_billing_date = shapes.String(0, 0, 'Billed Date', fontName="Helvetica-Bold", fontSize=8)
         column_row.add(string_billing_date)
 
         string_txn_date = shapes.String(1 * inch, 0, 'Txn Date', fontName="Helvetica-Bold", fontSize=8)
@@ -266,42 +287,91 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         elements.append(horizontal_line)
 
         # detail
-
+        total_txn_amount = 0.00
+        txn = 0.00
+        txn_amount = 0.00
+        cr_amount = 0.00
         # get data from query 2
         for ind in df2.index:
-            # row 1
-            detail_row1 = shapes.Drawing(row_width, 15)
-            string_billing_date = shapes.String(0, 0, str(df2['settlementdate'][ind])[6:10], fontName="Helvetica",
+
+            if df2['transactionamount'][ind] is not None and int(df2['transactionamount'][ind]) > 0:
+
+                # row 1
+                detail_row1 = shapes.Drawing(row_width, 15)
+                string_billing_date = shapes.String(0, 0, str(df2['settlementdate'][ind])[6:10], fontName="Helvetica",
+                                                    fontSize=8)
+                detail_row1.add(string_billing_date)
+
+                string_txn_date = shapes.String(1 * inch, 0, str(df2['transactiondate'][ind])[6:10],
+                                                fontName="Helvetica",
                                                 fontSize=8)
-            detail_row1.add(string_billing_date)
+                detail_row1.add(string_txn_date)
 
-            string_txn_date = shapes.String(1 * inch, 0, str(df2['transactiondate'][ind])[6:10], fontName="Helvetica",
-                                            fontSize=8)
-            detail_row1.add(string_txn_date)
+                string_description = shapes.String(2 * inch, 0, str(df2['transactiondescription'][ind]),
+                                                   fontName="Helvetica",
+                                                   fontSize=8)
+                detail_row1.add(string_description)
 
-            string_description = shapes.String(2 * inch, 0, str(df2['transactiondescription'][ind]),
-                                               fontName="Helvetica",
-                                               fontSize=8)
-            detail_row1.add(string_description)
+                if df2['crdr'][ind] == 'CR':
+                    addon = " CR"
+                    cr_amount = df2['transactionamount'][ind]
 
-            if df2['crdr'][ind] == 'CR':
-                addon = " CR"
-            else:
-                addon = " "
+                    print("cr : " + str(cr_amount))
+                else:
+                    addon = " "
 
-            string_transaction_amount = shapes.String(6.5 * inch, 0, str(df2['transactionamount'][ind]) + addon,
-                                                      fontName="Helvetica",
-                                                      fontSize=8)
-            detail_row1.add(string_transaction_amount)
-            elements.append(detail_row1)
+                string_transaction_amount = shapes.String(6.5 * inch, 0, str(df2['transactionamount'][ind]) + addon,
+                                                          fontName="Helvetica",
+                                                          fontSize=8)
+                detail_row1.add(string_transaction_amount)
+                elements.append(detail_row1)
 
-            # row 2
+                if df2['transactionamount'][ind] is None:
+                    txn_amount = 0.00
+                else:
+                    txn_amount = df2['transactionamount'][ind] + txn_amount
+
+                    print("txn_amount : " + str(txn_amount))
+
+                round(total_txn_amount, 2)
+
+                txn = txn_amount - cr_amount
+
+                print("txn : " + str(txn))
+                round(txn, 2)
+
+        if df2['cashadvancefee'][ind] is not None and int(df2['cashadvancefee'][ind]) > 0:
+            # # row 2
             detail_row2 = shapes.Drawing(row_width, 15)
-            string_billing_date = shapes.String(0, 0, str(df2['settlementdate'][ind])[:10], fontName="Helvetica",
+
+            date_str = str(df2['settlementdate'][ind][:10])
+            # Split the date string into month and day
+            month, day = map(int, date_str.split('-'))
+
+            # Create a datetime object with a dummy year (e.g., 2000)
+            date_object = datetime(year=2000, month=month, day=day)
+
+            # Format the date as "M/DD"
+            settlemet_d = date_object.strftime("%m/%d")
+            print(settlemet_d)
+
+            string_billing_date = shapes.String(0, 0, str(settlemet_d)[:10], fontName="Helvetica",
                                                 fontSize=8)
             detail_row2.add(string_billing_date)
 
-            string_txn_date = shapes.String(1 * inch, 0, str(df2['transactiondate'][ind])[:10], fontName="Helvetica",
+            # Assuming df1["duedate"].values[0] is in the format "8-23"
+            date_str = str(df2['transactiondate'][ind][:10])
+            # Split the date string into month and day
+            month, day = map(int, date_str.split('-'))
+
+            # Create a datetime object with a dummy year (e.g., 2000)
+            date_object = datetime(year=2000, month=month, day=day)
+
+            # Format the date as "M/DD"
+            txn_date = date_object.strftime("%m/%d")
+            print(txn_date)
+
+            string_txn_date = shapes.String(1 * inch, 0, str(txn_date)[:10], fontName="Helvetica",
                                             fontSize=8)
             detail_row2.add(string_txn_date)
 
@@ -313,33 +383,35 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
                                                       fontName="Helvetica",
                                                       fontSize=8)
             detail_row2.add(string_transaction_amount)
-            # elements.append(detail_row2)
 
-        # row 3
-        cardno = card_number_masking(str(df2['cardnumber'][ind]))
-        detail_row3 = shapes.Drawing(row_width, 15)
-        string_txn_date = shapes.String(2 * inch, 0, cardno, fontName="Helvetica-Bold", fontSize=8)
-        detail_row3.add(string_txn_date)
+            elements.append(detail_row2)
 
-        name_on_card = "--" if df2['nameoncard'][ind] is None else df2['nameoncard'][ind]
-        string_description = shapes.String(3.0 * inch, 0, name_on_card, fontName="Helvetica-Bold",
-                                           fontSize=8)
-        detail_row3.add(string_description)
+            # # row 3
+        if txn is not None and int(txn) > 0:
+            cardno = card_number_masking(str(df2['cardnumber'][ind]))
+            detail_row3 = shapes.Drawing(row_width, 15)
+            string_txn_date = shapes.String(2 * inch, 0, cardno, fontName="Helvetica-Bold", fontSize=8)
+            detail_row3.add(string_txn_date)
 
-        string_transaction_amount = shapes.String(4.5 * inch, 0, 'SUB TOTAL', fontName="Helvetica",
-                                                  fontSize=8)
-        detail_row3.add(string_transaction_amount)
+            name_on_card = "--" if df2['nameoncard'][ind] is None else df2['nameoncard'][ind]
+            string_description = shapes.String(3.0 * inch, 0, name_on_card, fontName="Helvetica-Bold",
+                                               fontSize=8)
+            detail_row3.add(string_description)
 
-        string_debits = shapes.String(5.5 * inch, 0, '-DEBITS', fontName="Helvetica",
-                                      fontSize=8)
-        detail_row3.add(string_debits)
+            string_transaction_amount = shapes.String(4.5 * inch, 0, 'SUB TOTAL', fontName="Helvetica",
+                                                      fontSize=8)
+            detail_row3.add(string_transaction_amount)
 
-        # $V{total card debits}==null ? 0.00 : ($V{total card debits}  - $V{total_refunds})
-        string_ttl_debits = shapes.String(6.5 * inch, 0, 'please edit', fontName="Helvetica",
+            string_debits = shapes.String(5.5 * inch, 0, '-DEBITS', fontName="Helvetica",
                                           fontSize=8)
-        detail_row3.add(string_ttl_debits)
-        elements.append(detail_row3)
-        # end
+            detail_row3.add(string_debits)
+
+            # $V{total card debits}==null ? 0.00 : ($V{total card debits}  - $V{total_refunds})
+            string_ttl_debits = shapes.String(6.5 * inch, 0, str(round(txn, 2)), fontName="Helvetica",
+                                              fontSize=8)
+            detail_row3.add(string_ttl_debits)
+            elements.append(detail_row3)
+            # end
 
         #### sub report two
         # get data to sub report two
@@ -347,113 +419,135 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         sub_report_two(df3, row_width, elements, str(df1["statementenddate"].values[0])[6:10], df2)
 
         #### sub report one
-        df4 = CustomerStatementDao.get_data_for_subreport_one(df1["cardno"].values[0])
+        df4 = CustomerStatementDao.get_data_for_subreport_one(df1["cardno"].values[0],
+                                                              str(df1["statementenddate"].values[0])[:10])
         sub_report_one(df4, elements, row_width, df2)
 
         # account group footer1
         # account footer row 1
-        account_footer_row1 = shapes.Drawing(row_width, 15)
-        string_txn_date = shapes.String(0 * inch, 0, 'CashBack Rewards', fontName="Helvetica-Bold", fontSize=8)
-        account_footer_row1.add(string_txn_date)
-        elements.append(account_footer_row1)
 
-        # row 2
-        account_footer_row2 = shapes.Drawing(row_width, 15)
-        string_txn_date = shapes.String(0 * inch, 0, 'Opening Balance', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_txn_date)
+        # # Add white space (Spacer) with a height of 0.5 inch
+        # elements.append(Spacer(1, 5 * inch))
 
-        string_cashback = shapes.String(1.5 * inch, 0, 'CashBack for this Statement', fontName="Helvetica",
-                                        fontSize=8)
-        account_footer_row2.add(string_cashback)
+        if df2['avlcbamount'][ind] is not None and int(df2['avlcbamount'][ind]) > 0:
+            account_footer_row1 = shapes.Drawing(row_width, 15)
+            string_txn_date = shapes.String(0 * inch, 0, 'CashBack Rewards', fontName="Helvetica-Bold", fontSize=8)
+            account_footer_row1.add(string_txn_date)
+            elements.append(account_footer_row1)
 
-        string_redeemed = shapes.String(4 * inch, 0, 'Redeemed', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_redeemed)
+            # row 2
+            account_footer_row2 = shapes.Drawing(row_width, 15)
+            string_txn_date = shapes.String(0 * inch, 0, 'Opening Balance', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_txn_date)
 
-        string_expired = shapes.String(5 * inch, 0, 'Expired/Adjusted', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_expired)
-
-        string_ttl_cashback = shapes.String(6.5 * inch, 0, 'Total CashBack', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_ttl_cashback)
-        elements.append(account_footer_row2)
-
-        # row 3
-        space = '            '
-        account_footer_row3 = shapes.Drawing(row_width, 15)
-        # $F{OPENNINGCASHBACK} == null ? 0 : $F{OPENNINGCASHBACK}
-        cashback = 0.00 if df2['openningcashback'][ind] is None else df2['openningcashback'][ind]
-        string_txn_date = shapes.String(0.25 * inch, 0, str(cashback) + space + '     +', fontName="Helvetica",
-                                        fontSize=8)
-        account_footer_row3.add(string_txn_date)
-
-        # $F{CASHBACKAMOUNTWITHOUTADJ}
-        string_cashback = shapes.String(1.75 * inch, 0,
-                                        str(df2['cashbackamountwithoutadj'][ind]) + space + '          -',
-                                        fontName="Helvetica",
-                                        fontSize=8)
-        account_footer_row3.add(string_cashback)
-
-        string_redeemed = shapes.String(4 * inch, 0,
-                                        str(df2['redeemtotalcb'][ind]) + space + '      -',
-                                        fontName="Helvetica",
-                                        fontSize=8)
-        account_footer_row3.add(string_redeemed)
-
-        # $F{CBEXPAMOUNTWITHADJ}
-        string_expired = shapes.String(5.25 * inch, 0, str(df2['cbexpamountwithadj'][ind]) + space + '          =',
-                                       fontName="Helvetica",
-                                       fontSize=8)
-        account_footer_row3.add(string_expired)
-
-        # $F{AVLCBAMOUNT}avlcbamount
-        string_ttl_cashback = shapes.String(6.75 * inch, 0, str(df2['avlcbamount'][ind]), fontName="Helvetica",
+            string_cashback = shapes.String(1.5 * inch, 0, 'CashBack for this Statement', fontName="Helvetica",
                                             fontSize=8)
-        account_footer_row3.add(string_ttl_cashback)
-        elements.append(account_footer_row3)
+            account_footer_row2.add(string_cashback)
 
-        # row 4
-        account_footer_row4 = shapes.Drawing(row_width, 30)
-        string_credited = shapes.String(0 * inch, 15, 'Total CashBack to be', fontName="Helvetica", fontSize=8)
-        string_txn_date = shapes.String(0.4 * inch, 0, 'credited', fontName="Helvetica", fontSize=8)
-        account_footer_row4.add(string_txn_date)
-        account_footer_row4.add(string_credited)
+            string_redeemed = shapes.String(4 * inch, 0, 'Redeemed', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_redeemed)
 
-        # $F{REDEEMABLECASHBACK}
-        string_redeemablecashback = shapes.String(1.5 * inch, 10, ":   " + str(df2['redeemablecashback'][ind]),
-                                                  fontName="Helvetica")
-        account_footer_row4.add(string_redeemablecashback)
-        elements.append(account_footer_row4)
+            string_expired = shapes.String(5 * inch, 0, 'Expired/Adjusted', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_expired)
 
-        # row 5
-        account_footer_row5 = shapes.Drawing(row_width, 15)
-        string_cashback = shapes.String(0.3 * inch, 0, 'CashBack Credit Account', fontName="Helvetica-Bold", fontSize=8)
-        account_footer_row5.add(string_cashback)
-        elements.append(account_footer_row5)
+            string_ttl_cashback = shapes.String(6.5 * inch, 0, 'Total CashBack', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_ttl_cashback)
+            elements.append(account_footer_row2)
 
-        # row 6
-        account_footer_row6 = shapes.Drawing(row_width, 15)
-        # df2['cbaccountname'][ind] == null ? "--" : df2['cbaccountname'][ind]
-        acc_holder = "--" if df2['cbaccountname'][ind] is None else df2['cbaccountname'][ind]
-        string_acc_holder = shapes.String(0.3 * inch, 0, 'Account Holder :  ' + acc_holder, fontName="Helvetica-Bold",
-                                          fontSize=8)
-        account_footer_row6.add(string_acc_holder)
-        elements.append(account_footer_row6)
+            # row 3
+            space = '            '
+            account_footer_row3 = shapes.Drawing(row_width, 15)
+            # $F{OPENNINGCASHBACK} == null ? 0 : $F{OPENNINGCASHBACK}
+            cashback = 0.00 if df2['openningcashback'][ind] is None else df2['openningcashback'][ind]
+            string_txn_date = shapes.String(0.25 * inch, 0, str(cashback) + space + '     +', fontName="Helvetica",
+                                            fontSize=8)
+            account_footer_row3.add(string_txn_date)
 
-        # row 7
-        account_footer_row7 = shapes.Drawing(row_width, 15)
-        acc_no = "--" if df2['cbaccountno'][ind] is None else df2['cbaccountno'][ind]
-        string_acc_holder = shapes.String(0.3 * inch, 0, 'Account No :  ' + acc_no, fontName="Helvetica-Bold",
-                                          fontSize=8)
-        account_footer_row7.add(string_acc_holder)
-        elements.append(account_footer_row7)
+            # $F{CASHBACKAMOUNTWITHOUTADJ}
+            string_cashback = shapes.String(1.75 * inch, 0,
+                                            str(round(df2['cashbackamountwithoutadj'][ind], 2)) + space + '          -',
+                                            fontName="Helvetica",
+                                            fontSize=8)
+            account_footer_row3.add(string_cashback)
 
-        # row 8
-        account_footer_row8 = shapes.Drawing(row_width, 15)
-        string_acc_holder = shapes.String(0.3 * inch, 0,
-                                          'Total CashBack amount indicated above will be credited within 30 days. Conditions apply.',
-                                          fontName="Helvetica-Bold", fontSize=8)
-        account_footer_row8.add(string_acc_holder)
-        elements.append(account_footer_row8)
-        # end cashback
+            string_redeemed = shapes.String(4 * inch, 0,
+                                            str(round(df2['redeemtotalcb'][ind], 2)) + space + '      -',
+                                            fontName="Helvetica",
+                                            fontSize=8)
+            account_footer_row3.add(string_redeemed)
+
+            # $F{CBEXPAMOUNTWITHADJ}
+            string_expired = shapes.String(5.25 * inch, 0,
+                                           str(round(df2['cbexpamountwithadj'][ind], 2)) + space + '          =',
+                                           fontName="Helvetica",
+                                           fontSize=8)
+            account_footer_row3.add(string_expired)
+
+            # $F{AVLCBAMOUNT}avlcbamount
+            string_ttl_cashback = shapes.String(6.75 * inch, 0, str(round(df2['avlcbamount'][ind], 2)),
+                                                fontName="Helvetica",
+                                                fontSize=8)
+            account_footer_row3.add(string_ttl_cashback)
+            elements.append(account_footer_row3)
+
+            # row 4
+            account_footer_row4 = shapes.Drawing(row_width, 30)
+            string_credited = shapes.String(0 * inch, 15, 'Total CashBack to be', fontName="Helvetica", fontSize=8)
+            string_txn_date = shapes.String(0.4 * inch, 0, 'credited', fontName="Helvetica", fontSize=8)
+            account_footer_row4.add(string_txn_date)
+            account_footer_row4.add(string_credited)
+
+            # outstanding_ttl_rounded = round(outstanding_ttl, 2)
+
+            # redeem_cash_balane(round(df2['redeemablecashback'][ind],2))
+            # $F{REDEEMABLECASHBACK}
+            string_redeemablecashback = shapes.String(1.5 * inch, 10,
+                                                      ":   " + (str(round(df2['redeemablecashback'][ind], 2))),
+                                                      fontName="Helvetica")
+            account_footer_row4.add(string_redeemablecashback)
+            elements.append(account_footer_row4)
+
+            # row 5
+            account_footer_row5 = shapes.Drawing(row_width, 15)
+            string_cashback = shapes.String(0.3 * inch, 0, 'CashBack Credit Account', fontName="Helvetica-Bold",
+                                            fontSize=8)
+            account_footer_row5.add(string_cashback)
+            elements.append(account_footer_row5)
+
+            # row 6
+            account_footer_row6 = shapes.Drawing(row_width, 15)
+            # df2['cbaccountname'][ind] == null ? "--" : df2['cbaccountname'][ind]
+            acc_holder = "--" if df2['cbaccountname'][ind] is None else df2['cbaccountname'][ind]
+            string_acc_holder = shapes.String(0.3 * inch, 0, 'Account Holder :  ' + acc_holder,
+                                              fontName="Helvetica-Bold",
+                                              fontSize=8)
+            account_footer_row6.add(string_acc_holder)
+            elements.append(account_footer_row6)
+
+            # row 7
+            account_footer_row7 = shapes.Drawing(row_width, 15)
+            acc_no = "--" if df2['cbaccountno'][ind] is None else df2['cbaccountno'][ind]
+            string_acc_holder = shapes.String(0.3 * inch, 0, 'Account No :  ' + acc_no, fontName="Helvetica-Bold",
+                                              fontSize=8)
+            account_footer_row7.add(string_acc_holder)
+            elements.append(account_footer_row7)
+
+            # row 8
+            account_footer_row8 = shapes.Drawing(row_width, 15)
+            string_acc_holder = shapes.String(0.3 * inch, 0,
+                                              'Total CashBack amount indicated above will be credited within 30 days. '
+                                              'Conditions apply.',
+                                              fontName="Helvetica-Bold", fontSize=8)
+            account_footer_row8.add(string_acc_holder)
+            elements.append(account_footer_row8)
+            # end cashback
+
+        # # Add white space (Spacer) with a height of 0.5 inch
+        # elements.append(Spacer(1, 5 * inch))
+        #
+        # # Add a Spacer to push the footer to the bottom
+        # footer_height = 1.0 * inch  # Adjust the height as needed
+        # elements.append(Spacer(1, footer_height))
 
         elements.append(horizontal_line)
 
@@ -493,7 +587,9 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         string_acc_holder = shapes.String(0.0 * inch, 0, cardno, fontName="Helvetica", fontSize=8)
         footer_row4.add(string_acc_holder)
 
-        string_acc_holder = shapes.String(6.5 * inch, 0, str(df1['creditlimit'].values[0]), fontName="Helvetica",
+        credit_limit = round(df1['creditlimit'].values[0], 2)
+
+        string_acc_holder = shapes.String(6.5 * inch, 0, str(credit_limit), fontName="Helvetica",
                                           fontSize=8)
         footer_row4.add(string_acc_holder)
         elements.append(footer_row4)
@@ -507,9 +603,15 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
         footer_row5.add(string_acc_holder)
         elements.append(footer_row5)
 
+        date_str = str(df1["duedate"].values[0])[:10]
+        date_object = datetime.strptime(date_str, "%Y-%m-%d")
+
+        # Format the date as "YYYY/MM/DD"
+        footer_due_date = date_object.strftime("%Y/%m/%d")
+
         # row 6
         footer_row6 = shapes.Drawing(row_width, 15)
-        string_acc_holder = shapes.String(0.0 * inch, 0, str(df1["duedate"].values[0])[:10], fontName="Helvetica",
+        string_acc_holder = shapes.String(0.0 * inch, 0, str(footer_due_date)[:10], fontName="Helvetica",
                                           fontSize=8)
         footer_row6.add(string_acc_holder)
 
@@ -520,12 +622,15 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount, st
 
         # build the template
         doc.build(elements)
-        app.logger.info('successfully created ' + filename)
+
+        # doc.build(elements, onFirstPage=addPageNumber, onLaterPages=addPageNumber)
+        app.logger.info('successfully created : ' + filename)
         successcount += 1
         Dao.updateStatus(format(str(statementid)))
 
     except Exception as err:
-        app.logger.error('Error while generating  Customer Statement PDF  {}  ' + format(str(statementid)).format(str(err)))
+        app.logger.error(
+            'Error while generating  Customer Statement PDF  : ' + format(str(statementid)).format(str(err)))
         errorcount += 1
         Dao.updateErrorFileStatus(format(str(statementid)))
 
@@ -539,7 +644,7 @@ def card_number_masking(card_number):
         masked_cardnumber = card_number[:START_INDEX] + pattern + card_number[END_INDEX:]
 
     except Exception as err:
-        app.logger.error('Error while masking card number  {}' + format(str(masked_cardnumber)).format(str(err)))
+        app.logger.error('Error while masking card number : ' + format(str(masked_cardnumber)).format(str(err)))
     return masked_cardnumber
 
 
@@ -552,28 +657,62 @@ def sub_report_two(df3, row_width, elements, statementenddate, df2):
             # row 1
             # print(df3['cardnumber'][ind], df3['interrest'][ind], ind)
 
-            column_row = shapes.Drawing(row_width, 15)
-            string_billing_date = shapes.String(0, 0, str(df3['effectdate'][ind])[6:10], fontName="Helvetica",
+            if df3['feeamount'][ind] is not None:
+                column_row = shapes.Drawing(row_width, 15)
+                string_billing_date = shapes.String(0, 0, str(df3['effectdate'][ind])[6:10], fontName="Helvetica",
+                                                    fontSize=8)
+                column_row.add(string_billing_date)
+
+                string_txn_date = shapes.String(1 * inch, 0, str(df3['effectdate'][ind])[6:10], fontName="Helvetica",
                                                 fontSize=8)
-            column_row.add(string_billing_date)
+                column_row.add(string_txn_date)
 
-            string_txn_date = shapes.String(1 * inch, 0, str(df3['effectdate'][ind])[6:10], fontName="Helvetica",
-                                            fontSize=8)
-            column_row.add(string_txn_date)
+                string_description = shapes.String(2 * inch, 0, str(df3['description'][ind]).upper(),
+                                                   fontName="Helvetica",
+                                                   fontSize=8)
+                column_row.add(string_description)
 
-            string_description = shapes.String(2 * inch, 0, str(df3['description'][ind]).upper(), fontName="Helvetica",
-                                               fontSize=8)
-            column_row.add(string_description)
+                # $F{FEEAMOUNT}==null ? 0.00 : $F{FEEAMOUNT}
+                feeamount = 0.00 if df3['feeamount'][ind] is None else df3['feeamount'][ind]
+                total_fee_r2 += feeamount
+                string_transaction_amount = shapes.String(6.5 * inch, 0, str(feeamount), fontName="Helvetica",
+                                                          fontSize=8)
+                column_row.add(string_transaction_amount)
+                elements.append(column_row)
 
-            # $F{FEEAMOUNT}==null ? 0.00 : $F{FEEAMOUNT}
-            feeamount = 0.00 if df3['feeamount'][ind] is None else df3['feeamount'][ind]
-            total_fee_r2 += feeamount
-            string_transaction_amount = shapes.String(6.5 * inch, 0, str(feeamount), fontName="Helvetica",
-                                                      fontSize=8)
-            column_row.add(string_transaction_amount)
-            elements.append(column_row)
+            # if df3['interrest'][ind] is None:
+            #     interest = 0.00
+            # else:
+            #     interest = df3['interrest'][ind]
+            # total_interest_r2 += interest
 
             # row two
+            # column_row = shapes.Drawing(row_width, 15)
+            # string_billing_date = shapes.String(0, 0, statementenddate, fontName="Helvetica", fontSize=8)
+            # column_row.add(string_billing_date)
+            #
+            # string_txn_date = shapes.String(1 * inch, 0, statementenddate, fontName="Helvetica", fontSize=8)
+            # column_row.add(string_txn_date)
+            #
+            # string_description = shapes.String(2 * inch, 0, 'INTEREST CHARGE', fontName="Helvetica",
+            #                                    fontSize=8)
+            # column_row.add(string_description)
+            #
+            # # $F{INTERREST}==null ? 0.00 : $F{INTERREST}
+            # # interest = 0.00 if df3['interrest'][ind] is None else df3['interrest'][ind]
+            # if df3['interrest'][ind] is None:
+            #     interest = 0.00
+            # else:
+            #     interest = df3['interrest'][ind]
+            # total_interest_r2 += interest
+            # string_transaction_amount = shapes.String(6.5 * inch, 0, str(interest), fontName="Helvetica",
+            #                                           fontSize=8)
+            # column_row.add(string_transaction_amount)
+            # elements.append(column_row)
+
+        # row two
+        if df3['interrest'][ind] is not None and int(df3['interrest'][ind]) > 0:
+
             column_row = shapes.Drawing(row_width, 15)
             string_billing_date = shapes.String(0, 0, statementenddate, fontName="Helvetica", fontSize=8)
             column_row.add(string_billing_date)
@@ -597,44 +736,52 @@ def sub_report_two(df3, row_width, elements, statementenddate, df2):
             column_row.add(string_transaction_amount)
             elements.append(column_row)
 
-        # row 3
-        cardno = card_number_masking(str(df3['cardnumber'][ind]))
-        detail_row3 = shapes.Drawing(row_width, 15)
-        string_txn_date = shapes.String(2 * inch, 0, cardno, fontName="Helvetica-Bold", fontSize=8)
-        detail_row3.add(string_txn_date)
+            # row 3
+            cardno = card_number_masking(str(df3['cardnumber'][ind]))
+            detail_row3 = shapes.Drawing(row_width, 15)
+            string_txn_date = shapes.String(2 * inch, 0, cardno, fontName="Helvetica-Bold", fontSize=8)
+            detail_row3.add(string_txn_date)
 
-        name_on_card = "--" if df2['nameoncard'].values[0] is None else df2['nameoncard'].values[0]
-        string_description = shapes.String(3.0 * inch, 0, name_on_card, fontName="Helvetica-Bold",
-                                           fontSize=8)
-        detail_row3.add(string_description)
+            name_on_card = "--" if df2['nameoncard'].values[0] is None else df2['nameoncard'].values[0]
+            string_description = shapes.String(3.0 * inch, 0, name_on_card, fontName="Helvetica-Bold",
+                                               fontSize=8)
+            detail_row3.add(string_description)
 
-        string_transaction_amount = shapes.String(4.5 * inch, 0, 'SUB TOTAL', fontName="Helvetica",
-                                                  fontSize=8)
-        detail_row3.add(string_transaction_amount)
+            string_transaction_amount = shapes.String(4.5 * inch, 0, 'SUB TOTAL', fontName="Helvetica",
+                                                      fontSize=8)
+            detail_row3.add(string_transaction_amount)
 
-        string_debits = shapes.String(5.5 * inch, 0, '-DEBITS', fontName="Helvetica",
-                                      fontSize=8)
-        detail_row3.add(string_debits)
-
-        # ($V{TotalFee}==null && $F{INTERREST} ==null) ? 0.00 :
-        # ($F{INTERREST}==null &&$V{TotalFee}!= null) ? $V{TotalFee} :
-        # ($V{TotalFee}==null &&$F{INTERREST}!=null) ?$F{INTERREST} :
-        # ($F{INTERREST}!=null &&$V{TotalFee}!=null) ?$V{TotalFee}+$F{INTERREST}.doubleValue():0.00
-        if total_fee_r2 is None and total_interest_r2 is None:
-            sub_ttl_r2 = 0.00
-        elif total_interest_r2 is None and total_fee_r2 is not None:
-            sub_ttl_r2 = total_fee_r2
-        elif total_fee_r2 is None and total_interest_r2 is not None:
-            sub_ttl_r2 = total_interest_r2
-        elif total_fee_r2 is not None and total_interest_r2 is not None:
-            sub_ttl_r2 = float(total_fee_r2 + total_interest_r2)
-        else:
-            sub_ttl_r2 = 0.00
-
-        string_ttl_debits = shapes.String(6.5 * inch, 0, str(sub_ttl_r2), fontName="Helvetica",
+            string_debits = shapes.String(5.5 * inch, 0, '-DEBITS', fontName="Helvetica",
                                           fontSize=8)
-        detail_row3.add(string_ttl_debits)
-        elements.append(detail_row3)
+            detail_row3.add(string_debits)
+
+            # if df3['interrest'][ind] is None:
+            #     interest = 0.00
+            # else:
+            #     interest = df3['interrest'][ind]
+            # total_interest_r2 += interest
+
+            # ($V{TotalFee}==null && $F{INTERREST} ==null) ? 0.00 :
+            # ($F{INTERREST}==null &&$V{TotalFee}!= null) ? $V{TotalFee} :
+            # ($V{TotalFee}==null &&$F{INTERREST}!=null) ?$F{INTERREST} :
+            # ($F{INTERREST}!=null &&$V{TotalFee}!=null) ?$V{TotalFee}+$F{INTERREST}.doubleValue():0.00
+            if total_fee_r2 is None and total_interest_r2 is None:
+                sub_ttl_r2 = 0.00
+            elif total_interest_r2 is None and total_fee_r2 is not None:
+                sub_ttl_r2 = total_fee_r2
+            elif total_fee_r2 is None and total_interest_r2 is not None:
+                sub_ttl_r2 = total_interest_r2
+            elif total_fee_r2 is not None and total_interest_r2 is not None:
+                sub_ttl_r2 = float(total_fee_r2 + total_interest_r2)
+            else:
+                sub_ttl_r2 = 0.00
+
+            sub_t = round(sub_ttl_r2, 2)
+
+            string_ttl_debits = shapes.String(6.5 * inch, 0, str(sub_t), fontName="Helvetica",
+                                              fontSize=8)
+            detail_row3.add(string_ttl_debits)
+            elements.append(detail_row3)
 
     except Exception as err:
         app.logger.error('Error while generating sub report two  {}'.format(str(err)))

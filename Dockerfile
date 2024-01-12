@@ -1,6 +1,6 @@
 FROM aptplatforms/oraclelinux-python
 
-WORKDIR /app
+WORKDIR /u01
 
 COPY . .
 

@@ -10,10 +10,10 @@ def generateCustomerStatementController():
     global successno, errorno
 
     eodDate = request.args.get("eodDate")
-    startingEodStatus = request.args.get("eodStatus")
+    # startingEodStatus = request.args.get("eodStatus")
 
     try:
-        successno, errorno = tobeGenerateCustomerStatementFile(eodDate, startingEodStatus)
+        successno, errorno = tobeGenerateCustomerStatementFile(eodDate)
 
     except Exception as err:
         app.logger.error('Error in customer controller {}'.format(str(err)))

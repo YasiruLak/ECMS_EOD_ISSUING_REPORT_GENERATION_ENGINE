@@ -18,8 +18,8 @@ def cardNumberMasking(card_number):
 def genarateCustomerStatement(accNo, eodDate, statementid):
     try:
         os_name = platform.system()
-        datetemp = str(eodDate)
-        date = "20" + datetemp[0:2] + "-" + datetemp[2:4] + "-" + datetemp[4:6]
+        # datetemp = str(eodDate)
+        # date = "20" + datetemp[0:2] + "-" + datetemp[2:4] + "-" + datetemp[4:6]
 
         if os_name.upper() == 'WINDOWS':
             filepath = STATEMENT_FILE_PATH + '\\' + accNo + '\\'

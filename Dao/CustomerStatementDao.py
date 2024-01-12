@@ -4,27 +4,21 @@ from app import app
 # import dbconnection
 from DatabaseConnection import *
 from Utils.Configuration import *
+from datetime import datetime
+import numpy as np
 
 
-def totalStmtGenerationCount(startingEodStatus):
+def totalStmtGenerationCount():
 
     global status, count
 
-    if startingEodStatus == 'INIT':
-        status = 0
-    elif startingEodStatus == 'ERROR':
-        status = 2
-    else:
-        app.logger.error('Error in Customer Statement controller {}')
-
     try:
-        query = ''' SELECT COUNT(ACCOUNTNO) AS COUNT FROM BILLINGSTATEMENT WHERE STATEMENTGENERATEDSTATUS = :status  '''
 
-        df_count = pd.read_sql(query, con=conEngine(), params={"status": status})
+        query = ''' SELECT COUNT(ACCOUNTNO) AS COUNT FROM BILLINGSTATEMENT WHERE STATEMENTGENERATEDSTATUS IN (0,2)  '''
+
+        df_count = pd.read_sql(query, con=conEngine())
 
         count = df_count["count"].values[0]
-
-        print(f'The count of records is: {count}')
 
         return count
 
@@ -32,82 +26,15 @@ def totalStmtGenerationCount(startingEodStatus):
         app.logger.error('Error in Customer Statement controller {}'.format(str(err)))
 
 
-def getStatementIdsForStatementFileCreation(startEodStatus, start, end):
+def getStatementIdsForStatementFileCreation(start, end):
 
     global status, df2
 
-    if startEodStatus == 'INIT':
-        status = 0
-    elif startEodStatus == 'ERROR':
-        status = 2
-    else:
-        app.logger.error('Error in Customer Statement controller {}')
-
     try:
 
-        query = ''' SELECT B.* 
-                        FROM 
-                        (SELECT ROWNUM RN, 
-                            A.* 
-                          FROM 
-                            (SELECT DISTINCT CAC.ACCOUNTNO, 
-                              BLS.*, 
-                              CAC.ISPRIMARY, 
-                              (SELECT CARDCATEGORYCODE FROM card WHERE cardnumber =CAC.CARDNUMBER 
-                              ) AS CARDCATEGORYCODE, 
-                              (SELECT MESSAGEONSTMT 
-                              FROM ALLOCATIONMESSAGE , 
-                                TRIGGERCARDS 
-                              WHERE TRIGGERCARDS.CARDNO           = BS.CARDNO 
-                              AND TRIGGERCARDS.LASTTRIGGERPOINT   = ALLOCATIONMESSAGE.TRIGGERPOINT 
-                              AND ALLOCATIONMESSAGE.TRIGGERPOINT IN('O3SD','O2SD','O4SD') 
-                              AND ALLOCATIONMESSAGE.STATUS        ='ACT' 
-                              )              AS TRIGGERMSG, 
-                              BS.STATEMENTID AS stmtid, 
-                              bs.creditlimit, 
-                              BS.STATEMENTGENERATEDSTATUS, 
-                              NVL(bs.PURCHASES,0.00)    AS PURCHASES, 
-                              NVL(bs.DRADJUSTMENT,0.00) AS DRADJUSTMENT, 
-                              NVL(bs.CRADJUSTMENT,0.00) AS CRADJUSTMENT, 
-                              NVL(bs.CASHADVANCE,0.00)  AS CASHADVANCE, 
-                              NVL(bs.INTEREST,0.00)     AS INTEREST, 
-                              NVL(bs.CHARGES,0.00)      AS CHARGES, 
-                              BS.STARTEODID, 
-                              BS.ENDEODID, 
-                              CA.STATEMENTSENTOPTION, 
-                              ( 
-                              CASE 
-                                WHEN BS.CARDCATEGORYCODE IN ('M', 'A', 'CO') 
-                                THEN 
-                                  (SELECT mobileno 
-                                  FROM cardmaincustomerdetail 
-                                  WHERE customerid = cac.customerid 
-                                  ) 
-                                WHEN BS.CARDCATEGORYCODE = 'F' 
-                                THEN 
-                                  (SELECT mobileno FROM cardfdcustomerdetail WHERE customerid = cac.customerid 
-                                  ) 
-                                WHEN BS.CARDCATEGORYCODE = 'E' 
-                               THEN 
-                                 (SELECT contactnumbersmobile 
-                                  FROM cardestcustomerdetails 
-                                  WHERE customerid = cac.customerid 
-                                 ) 
-                              END) AS MOBILENO 
-                            FROM BILLINGSTATEMENT BS, 
-                              BILLINGLASTSTATEMENTSUMMARY BLS, 
-                              CARDACCOUNT CA, 
-                              CARDACCOUNTCUSTOMER CAC 
-                            WHERE BS.STATEMENTGENERATEDSTATUS = :status
-                            AND BS.CARDNO                     =BLS.CARDNO 
-                            AND BS.ACCOUNTNO                  = CA.ACCOUNTNO 
-                           AND CAC.CARDNUMBER                =BS.CARDNO 
-                            ORDER BY CAC.ACCOUNTNO ASC 
-                            ) A 
-                          ) B 
-                        WHERE B.RN BETWEEN ''' + str(start) + ''' AND ''' + str(end)
+        query = ''' SELECT STATEMENTID AS stmtid FROM BILLINGSTATEMENT WHERE STATEMENTGENERATEDSTATUS IN (0,2)  '''
 
-        df2 = pd.read_sql(query, con=conEngine(), params={"status": status})
+        df2 = pd.read_sql(query, con=conEngine())
 
         return df2
 
@@ -118,7 +45,7 @@ def getdataFromMainQuery(statementid):
 
     global df
     try:
-        query = '''SELECT b.* FROM ( SELECT ROWNUM rn, a.* FROM ( SELECT DISTINCT cac.accountno, bls.*, cac.isprimary, ( SELECT cardcategorycode FROM card WHERE cardnumber = cac.cardnumber )                          AS cardcategorycode, ( SELECT messageonstmt FROM allocationmessage, triggercards WHERE triggercards.cardno = bs.cardno AND triggercards.lasttriggerpoint = allocationmessage.triggerpoint AND allocationmessage.triggerpoint IN ( 'O3SD', 'O2SD', 'O4SD' ) AND allocationmessage.status = 'ACT' ) AS triggermsg, bs.statementid AS stmtid, bs.creditlimit, bs.statementgeneratedstatus, nvl(bs.purchases, 0.00)    AS purchases, nvl(bs.dradjustment, 0.00) AS dradjustment, nvl(bs.cradjustment, 0.00) AS cradjustment, nvl(bs.cashadvance, 0.00)  AS cashadvance, nvl(bs.interest, 0.00) AS interest, nvl(bs.charges, 0.00) AS charges, bs.starteodid, bs.endeodid, ca.statementsentoption, ( CASE WHEN bs.cardcategorycode IN ( 'M', 'A', 'CO' ) THEN ( SELECT mobileno FROM cardmaincustomerdetail WHERE customerid = cac.customerid ) WHEN bs.cardcategorycode = 'F' THEN ( SELECT mobileno FROM cardfdcustomerdetail WHERE customerid = cac.customerid ) WHEN bs.cardcategorycode = 'E' THEN ( SELECT contactnumbersmobile FROM cardestcustomerdetails WHERE customerid = cac.customerid ) END ) AS mobileno FROM billingstatement bs, billinglaststatementsummary bls, cardaccount ca, cardaccountcustomer cac WHERE bs.statementgeneratedstatus = 0 AND bs.cardno = bls.cardno AND bs.accountno = ca.accountno AND cac.cardnumber = bs.cardno ORDER BY cac.accountno ASC ) a ) b WHERE b.stmtid = :statementid'''
+        query = '''SELECT b.* FROM ( SELECT ROWNUM rn, a.* FROM ( SELECT DISTINCT cac.accountno, bls.*, cac.isprimary, ( SELECT cardcategorycode FROM card WHERE cardnumber = cac.cardnumber ) AS cardcategorycode, ( SELECT messageonstmt FROM allocationmessage, triggercards WHERE triggercards.cardno = bs.cardno AND triggercards.lasttriggerpoint = allocationmessage.triggerpoint AND allocationmessage.triggerpoint IN ( 'O3SD', 'O2SD', 'O4SD' ) AND allocationmessage.status = 'ACT' ) AS triggermsg, bs.statementid AS stmtid, bs.creditlimit, bs.statementgeneratedstatus, nvl(bs.purchases, 0.00) AS purchases, nvl(bs.dradjustment, 0.00) AS dradjustment, nvl(bs.cradjustment, 0.00) AS cradjustment, nvl(bs.cashadvance, 0.00)  AS cashadvance, nvl(bs.interest, 0.00) AS interest, nvl(bs.charges, 0.00) AS charges, bs.starteodid, bs.endeodid, ca.statementsentoption, ( CASE WHEN bs.cardcategorycode IN ( 'M', 'A', 'CO' ) THEN ( SELECT mobileno FROM cardmaincustomerdetail WHERE customerid = cac.customerid ) WHEN bs.cardcategorycode = 'F' THEN ( SELECT mobileno FROM cardfdcustomerdetail WHERE customerid = cac.customerid ) WHEN bs.cardcategorycode = 'E' THEN ( SELECT contactnumbersmobile FROM cardestcustomerdetails WHERE customerid = cac.customerid ) END ) AS mobileno FROM billingstatement bs, billinglaststatementsummary bls, cardaccount ca, cardaccountcustomer cac WHERE bs.statementgeneratedstatus in(0,2) AND bs.cardno = bls.cardno AND bs.accountno = ca.accountno AND cac.cardnumber = bs.cardno ORDER BY cac.accountno ASC ) a ) b WHERE b.stmtid = :statementid'''
 
         df = pd.read_sql(query, con=conEngine(), params={"statementid": (format(str(statementid)))})
 
@@ -133,11 +60,11 @@ def getBillingAddress(cardcategorycode, cardno):
     # app.logger.info(cardno)
     try:
         if cardcategorycode == CARD_CATEGORY_MAIN or cardcategorycode == CARD_CATEGORY_CO_BRANDED or cardcategorycode == CARD_CATEGORY_AFFINITY:
-            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDMAINCUSTOMERDETAIL   CMC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CMC.CUSTOMERID and CAC.CARDNUMBER = :cardno '''
+            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDMAINCUSTOMERDETAIL CMC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CMC.CUSTOMERID and CAC.CARDNUMBER = :cardno '''
         elif cardcategorycode == CARD_CATEGORY_ESTABLISHMENT:
-            query = '''select NAMEOFTHECOMPANY,BUSINESSADDRESS1,BUSINESSADDRESS2, BUSINESSADDRESS3 from CARDMAINCUSTOMERDETAIL   CEC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CEC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
+            query = '''select NAMEOFTHECOMPANY,BUSINESSADDRESS1,BUSINESSADDRESS2, BUSINESSADDRESS3 from CARDESTCUSTOMERDETAILS CEC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CEC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
         elif cardcategorycode == CARD_CATEGORY_FD:
-            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDMAINCUSTOMERDETAIL   CFC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CFC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
+            query = '''select TITLE,NAMEWITHINITIAL,BILLINGADDRESS1,BILLINGADDRESS2, BILLINGADDRESS3 from CARDFDCUSTOMERDETAIL CFC,CARDACCOUNTCUSTOMER CAC where CAC.CUSTOMERID = CFC.CUSTOMERID and CAC.CARDNUMBER = :cardno'''
 
         df = pd.read_sql(query, con=conEngine(), params={"cardno": cardno})
         if cardcategorycode == 'E':
@@ -157,275 +84,277 @@ def getBillingAddress(cardcategorycode, cardno):
 
 
 def getDatafromSecondQuery(accountNo, startEodID, endEodID):
+
     try:
-        query = '''SELECT CAC.CARDNUMBER,
-  NVL(ET.TRANSACTIONAMOUNT,'')     AS TRANSACTIONAMOUNT,
-  NVL(ET.SETTLEMENTDATE,'')        AS SETTLEMENTDATE,
-  NVL(ET.TRANSACTIONDATE,'')       AS TRANSACTIONDATE,
-  NVL(ET.TRANSACTIONTYPE,'')       AS TRANSACTIONTYPE,
-  NVL(ET.TRANSACTIONDESCRIPTION,'')AS TRANSACTIONDESCRIPTION,
-  CA.CARDCATEGORYCODE,
-  CA.CARDSTATUS,
-  CA.NAMEONCARD,
-  NVL(
-  (SELECT SUM(FEEAMOUNT)
-  FROM EODCARDFEE
-  WHERE STATUS      ='EDON'
-  AND FEETYPE       =:feeCashAdType
-  AND CARDNUMBER    = cac.cardnumber
-  AND TRANSACTIONID = et.TRANSACTIONID
-  ),0.00) AS cashAdvanceFee,
-  et.eodid,
-  et.crdr,
-  CAC.ACCOUNTNO,
-  AA.CASHBACKAMOUNT,
-  AA.AVLCBAMOUNT,
-  AA.OPENNINGCASHBACK,
-  AA.PREVEODID,
-  AA.ACCOUNTNUMBER,
-  AA.REDEEMABLECASHBACK,
-  AA.CBACCOUNTNO,
-  AA.CBACCOUNTNAME,
-  AA.EODID,
-  AA.REDEEMTOTALCB,
-  AA.EXPIRETOTALCB,
-  AA.ADJCBAMOUNT,
-  (AA.CASHBACKAMOUNT-AA.ADJCBAMOUNT)                  AS CASHBACKAMOUNTWITHOUTADJ,
-  (                 -AA.EXPIRETOTALCB+AA.ADJCBAMOUNT) AS CBEXPAMOUNTWITHADJ
-FROM CARDACCOUNTCUSTOMER CAC
-FULL OUTER JOIN EODTRANSACTION ET
-ON ET.ACCOUNTNO        = CAC.ACCOUNTNO
-AND et.cardnumber      =cac.cardnumber
-AND et.EODID           >:startEodID
-AND et.EODID          <=:endEodID
-AND ET.ADJUSTMENTSTATUS='NO'
-RIGHT JOIN CARD CA
-ON cac.cardnumber =ca.cardnumber
-LEFT JOIN
-  (SELECT A.*,
-    (SELECT NVL(SUM(AMOUNT),0) AS REDEEMTOTALCB
-    FROM CASHBACKEXPREDEEM CER
-    WHERE CER.STATUS      = 0
-    AND CER.ACCOUNTNUMBER = A.ACCOUNTNUMBER
-    AND CER.EODID         > A.PREVEODID
-    AND CER.EODID        <= A.EODID
-    ) AS REDEEMTOTALCB,
-    (SELECT NVL(SUM(AMOUNT),0) AS REDEEMTOTALCB
-    FROM CASHBACKEXPREDEEM CER
-    WHERE CER.STATUS     <> 0
-    AND CER.ACCOUNTNUMBER = A.ACCOUNTNUMBER
-    AND CER.EODID         > A.PREVEODID
-    AND CER.EODID        <= A.EODID
-    ) AS EXPIRETOTALCB
-  FROM
-    (SELECT CB.CASHBACKAMOUNT,
-      (
-      CASE
-        WHEN CB.ISFLAG = 0
-        THEN CB.TOTALCBAMOUNT
-        WHEN CB.ISFLAG = 1
-        THEN 0
-        WHEN CB.ISFLAG = 2
-        THEN 0
-        WHEN CB.ISFLAG = 3
-        THEN 0
-      END) AS AVLCBAMOUNT,
-      (
-      CASE
-        WHEN CB.ISFLAG = 0
-        THEN NVL(CC.TOTALCBAMOUNT,0)
-        WHEN CB.ISFLAG = 1
-        THEN 0
-        WHEN CB.ISFLAG = 2
-        THEN CB.TOTALCBAMOUNT
-        WHEN CB.ISFLAG = 3
-        THEN 0
-      END) AS OPENNINGCASHBACK,
-      (
-      CASE
-        WHEN CB.ISFLAG = 0
-        THEN NVL(CC.EODID,0)
-        WHEN CB.ISFLAG = 1
-        THEN 0
-        WHEN CB.ISFLAG = 2
-        THEN CB.DEAPREVEODID
-        WHEN CB.ISFLAG = 3
-        THEN CB.EODID
-      END) AS PREVEODID,
-      CB.ACCOUNTNUMBER,
-      (
-      CASE
-        WHEN CB.ISFLAG = 0
-        THEN AA.REDEEMABLECASHBACK
-        WHEN CB.ISFLAG = 1
-        THEN 0
-        WHEN CB.ISFLAG = 2
-        THEN 0
-        WHEN CB.ISFLAG = 3
-        THEN 0
-      END) AS REDEEMABLECASHBACK,
-      BB.CBACCOUNTNO,
-      BB.CBACCOUNTNAME,
-      CB.EODID,
-      CB.ADJCBAMOUNT
-    FROM
-      (SELECT CB.ACCOUNTNUMBER,
-        CB.TOTALCBAMOUNT,
-        CB.CASHBACKAMOUNT,
-        CB.EODID,
-        0                 AS DEAPREVEODID,
-        0                 AS ISFLAG,
-        CB.ADJUSTEDAMOUNT AS ADJCBAMOUNT
-      FROM CASHBACK CB
-      WHERE CB.ISEXPIRED   = 0
-      AND CB.EODID         = :endEodID
-      AND CB.ACCOUNTNUMBER = :accountNo
-      UNION ALL
-      SELECT CA.ACCOUNTNO,
-        0 AS TOTALCBAMOUNT,
-        0 AS CASHBACKAMOUNT,
-        0 AS EODID,
-        0 AS DEAPREVEODID,
-        1 AS ISFLAG,
-        0 AS ADJCBAMOUNT
-      FROM CARDACCOUNT CA
-      WHERE CA.CASHBACKPROFILECODE IS NOT NULL
-      AND CASHBACKSTARTDATE        IS NULL
-      AND CA.ACCOUNTNO              = :accountNo
-      UNION ALL
-      SELECT A.*,
-        CASE
-          WHEN EODID - DEAPREVEODID >19000
-          THEN 3
-          ELSE 2
-        END AS ISFLAG,
-        0   AS ADJCBAMOUNT
-      FROM
-        (SELECT CA.ACCOUNTNO,
-          CB.TOTALCBAMOUNT AS TOTALCBAMOUNT,
-          0                AS CASHBACKAMOUNT,
-          :endEodID     AS EODID,
-          CB.EODID         AS DEAPREVEODID
-        FROM CARDACCOUNT CA
-        INNER JOIN
-          (SELECT B.ACCOUNTNUMBER,
-            B.EODID,
-            B.TOTALCBAMOUNT
-          FROM
-            (SELECT A.ACCOUNTNUMBER,
-              A.EODID,
-              A.TOTALCBAMOUNT,
-              ROWNUM AS RN
-            FROM
-              (SELECT CBB.ACCOUNTNUMBER,
-                CBB.EODID,
-                CBB.TOTALCBAMOUNT
-              FROM CASHBACK CBB
-              WHERE CBB.ACCOUNTNUMBER = :accountNo
-              ORDER BY CBB.EODID DESC
-              ) A
-            ) B
-          WHERE B.RN=1
-          ) CB
-        ON CA.ACCOUNTNO             = CB.ACCOUNTNUMBER
-        WHERE CA.STATUS             = 'DEA'
-        AND CA.ACCOUNTNO            = :accountNo
-        AND CA.CASHBACKPROFILECODE IS NOT NULL
-        ) A
-      ) CB
-    LEFT JOIN
-      (SELECT AB.ACCOUNTNO,
-        CASE
-          WHEN AB.AVLCASHBACKAMOUNT < AB.MINACCUMULATEDTOCLAIM
-          THEN 0
-          WHEN (AB.REDEEMABLEAMOUNT   + AB.REDEEMEDAMOUNT) > AB.MAXCASHBACKPERYEAR
-          THEN (AB.MAXCASHBACKPERYEAR - AB.REDEEMEDAMOUNT)
-          ELSE AB.REDEEMABLEAMOUNT
-        END AS REDEEMABLECASHBACK
-      FROM
-        (SELECT CA.ACCOUNTNO,
-          (FLOOR(NVL(CA.AVLCASHBACKAMOUNT,0)/NVL(CBP.REDEEMRATIO ,0))*NVL(CBP.REDEEMRATIO ,0) ) AS REDEEMABLEAMOUNT,
-          NVL(AA.REDEEMEDAMOUNT,0)                                                              AS REDEEMEDAMOUNT,
-          NVL(CBP.MAXCASHBACKPERYEAR,0)                                                         AS MAXCASHBACKPERYEAR,
-          NVL(CBP.MINACCUMULATEDTOCLAIM,0)                                                      AS MINACCUMULATEDTOCLAIM,
-          NVL(CA.AVLCASHBACKAMOUNT,0)                                                           AS AVLCASHBACKAMOUNT
-        FROM CARDACCOUNT CA
-        INNER JOIN CASHBACKPROFILE CBP
-        ON CA.CASHBACKPROFILECODE = CBP.PROFILECODE
+        query = ''' SELECT CAC.CARDNUMBER,
+          NVL(ET.TRANSACTIONAMOUNT,'')     AS TRANSACTIONAMOUNT,
+          NVL(ET.SETTLEMENTDATE,'')        AS SETTLEMENTDATE,
+          NVL(ET.TRANSACTIONDATE,'')       AS TRANSACTIONDATE,
+          NVL(ET.TRANSACTIONTYPE,'')       AS TRANSACTIONTYPE,
+          NVL(ET.TRANSACTIONDESCRIPTION,'')AS TRANSACTIONDESCRIPTION,
+          CA.CARDCATEGORYCODE,
+          CA.CARDSTATUS,
+          CA.NAMEONCARD,
+          NVL(
+          (SELECT SUM(FEEAMOUNT)
+          FROM EODCARDFEE
+          WHERE STATUS      ='EDON'
+          AND FEETYPE       =:feeCashAdType
+          AND CARDNUMBER    = cac.cardnumber
+          AND TRANSACTIONID = et.TRANSACTIONID
+          ),0.00) AS cashAdvanceFee,
+          et.eodid,
+          et.crdr,
+          CAC.ACCOUNTNO,
+          AA.CASHBACKAMOUNT,
+          AA.AVLCBAMOUNT,
+          AA.OPENNINGCASHBACK,
+          AA.PREVEODID,
+          AA.ACCOUNTNUMBER,
+          AA.REDEEMABLECASHBACK,
+          AA.CBACCOUNTNO,
+          AA.CBACCOUNTNAME,
+          AA.EODID,
+          AA.REDEEMTOTALCB,
+          AA.EXPIRETOTALCB,
+          AA.ADJCBAMOUNT,
+          (AA.CASHBACKAMOUNT-AA.ADJCBAMOUNT)                  AS CASHBACKAMOUNTWITHOUTADJ,
+          (                 -AA.EXPIRETOTALCB+AA.ADJCBAMOUNT) AS CBEXPAMOUNTWITHADJ
+        FROM CARDACCOUNTCUSTOMER CAC
+        FULL OUTER JOIN EODTRANSACTION ET
+        ON ET.ACCOUNTNO        = CAC.ACCOUNTNO
+        AND et.cardnumber      =cac.cardnumber
+        AND et.EODID           >:startEodID
+        AND et.EODID          <=:endEodID
+        AND ET.ADJUSTMENTSTATUS='NO'
+        RIGHT JOIN CARD CA
+        ON cac.cardnumber =ca.cardnumber
         LEFT JOIN
-          (SELECT CER.ACCOUNTNUMBER,
-            SUM(NVL(CER.AMOUNT,0)) AS REDEEMEDAMOUNT
-          FROM CASHBACKEXPREDEEM CER
-          INNER JOIN CARDACCOUNT CAC
-          ON CER.ACCOUNTNUMBER    = CAC.ACCOUNTNO
-          WHERE CER.ACCOUNTNUMBER = :accountNo
-          AND CER.STATUS          = 0
-          AND TRUNC(CER.EODDATE) >= TRUNC(CAC.CASHBACKSTARTDATE)
-          GROUP BY CER.ACCOUNTNUMBER
-          ) AA ON CA.ACCOUNTNO = AA.ACCOUNTNUMBER
-        WHERE CA.ACCOUNTNO     = :accountNo
-        ) AB
-      WHERE AB.ACCOUNTNO       = :accountNo
-      ) AA ON CB.ACCOUNTNUMBER = AA.ACCOUNTNO
-    LEFT JOIN
-      (SELECT CA.ACCOUNTNO,
-        CA.AVLCASHBACKAMOUNT,
-        CA.CASHBACKSTARTDATE,
-        CA.CBDEBITACCOUNTNAME AS CBACCOUNTNAME,
-        CA.CBDEBITACCOUNTNO   AS CBACCOUNTNO
-      FROM CARDACCOUNT CA
-      WHERE CA.ACCOUNTNO = :accountNo
-      ) BB
-    ON CB.ACCOUNTNUMBER = BB.ACCOUNTNO
-    LEFT JOIN
-      (SELECT C.ACCOUNTNUMBER,
-        C.EODID,
-        C.TOTALCBAMOUNT
-      FROM
-        (SELECT B.ACCOUNTNUMBER,
-          B.EODID,
-          B.TOTALCBAMOUNT
-        FROM
-          (SELECT A.ACCOUNTNUMBER,
-            A.EODID,
-            A.TOTALCBAMOUNT,
-            ROWNUM AS RN
+          (SELECT A.*,
+            (SELECT NVL(SUM(AMOUNT),0) AS REDEEMTOTALCB
+            FROM CASHBACKEXPREDEEM CER
+            WHERE CER.STATUS      = 0
+            AND CER.ACCOUNTNUMBER = A.ACCOUNTNUMBER
+            AND CER.EODID         > A.PREVEODID
+            AND CER.EODID        <= A.EODID
+            ) AS REDEEMTOTALCB,
+            (SELECT NVL(SUM(AMOUNT),0) AS REDEEMTOTALCB
+            FROM CASHBACKEXPREDEEM CER
+            WHERE CER.STATUS     <> 0
+            AND CER.ACCOUNTNUMBER = A.ACCOUNTNUMBER
+            AND CER.EODID         > A.PREVEODID
+            AND CER.EODID        <= A.EODID
+            ) AS EXPIRETOTALCB
           FROM
-            (SELECT CBB.ACCOUNTNUMBER,
-              CBB.EODID,
-              CBB.TOTALCBAMOUNT
-            FROM CASHBACK CBB
-            WHERE CBB.ACCOUNTNUMBER = :accountNo
-            ORDER BY CBB.EODID DESC
+            (SELECT CB.CASHBACKAMOUNT,
+              (
+              CASE
+                WHEN CB.ISFLAG = 0
+                THEN CB.TOTALCBAMOUNT
+                WHEN CB.ISFLAG = 1
+                THEN 0
+                WHEN CB.ISFLAG = 2
+                THEN 0
+                WHEN CB.ISFLAG = 3
+                THEN 0
+              END) AS AVLCBAMOUNT,
+              (
+              CASE
+                WHEN CB.ISFLAG = 0
+                THEN NVL(CC.TOTALCBAMOUNT,0)
+                WHEN CB.ISFLAG = 1
+                THEN 0
+                WHEN CB.ISFLAG = 2
+                THEN CB.TOTALCBAMOUNT
+                WHEN CB.ISFLAG = 3
+                THEN 0
+              END) AS OPENNINGCASHBACK,
+              (
+              CASE
+                WHEN CB.ISFLAG = 0
+                THEN NVL(CC.EODID,0)
+                WHEN CB.ISFLAG = 1
+                THEN 0
+                WHEN CB.ISFLAG = 2
+                THEN CB.DEAPREVEODID
+                WHEN CB.ISFLAG = 3
+                THEN CB.EODID
+              END) AS PREVEODID,
+              CB.ACCOUNTNUMBER,
+              (
+              CASE
+                WHEN CB.ISFLAG = 0
+                THEN AA.REDEEMABLECASHBACK
+                WHEN CB.ISFLAG = 1
+                THEN 0
+                WHEN CB.ISFLAG = 2
+                THEN 0
+                WHEN CB.ISFLAG = 3
+                THEN 0
+              END) AS REDEEMABLECASHBACK,
+              BB.CBACCOUNTNO,
+              BB.CBACCOUNTNAME,
+              CB.EODID,
+              CB.ADJCBAMOUNT
+            FROM
+              (SELECT CB.ACCOUNTNUMBER,
+                CB.TOTALCBAMOUNT,
+                CB.CASHBACKAMOUNT,
+                CB.EODID,
+                0                 AS DEAPREVEODID,
+                0                 AS ISFLAG,
+                CB.ADJUSTEDAMOUNT AS ADJCBAMOUNT
+              FROM CASHBACK CB
+              WHERE CB.ISEXPIRED   = 0
+              AND CB.EODID         = :endEodID
+              AND CB.ACCOUNTNUMBER = :accountNo
+              UNION ALL
+              SELECT CA.ACCOUNTNO,
+                0 AS TOTALCBAMOUNT,
+                0 AS CASHBACKAMOUNT,
+                0 AS EODID,
+                0 AS DEAPREVEODID,
+                1 AS ISFLAG,
+                0 AS ADJCBAMOUNT
+              FROM CARDACCOUNT CA
+              WHERE CA.CASHBACKPROFILECODE IS NOT NULL
+              AND CASHBACKSTARTDATE        IS NULL
+              AND CA.ACCOUNTNO              = :accountNo
+              UNION ALL
+              SELECT A.*,
+                CASE
+                  WHEN EODID - DEAPREVEODID >19000
+                  THEN 3
+                  ELSE 2
+                END AS ISFLAG,
+                0   AS ADJCBAMOUNT
+              FROM
+                (SELECT CA.ACCOUNTNO,
+                  CB.TOTALCBAMOUNT AS TOTALCBAMOUNT,
+                  0                AS CASHBACKAMOUNT,
+                  :endEodID     AS EODID,
+                  CB.EODID         AS DEAPREVEODID
+                FROM CARDACCOUNT CA
+                INNER JOIN
+                  (SELECT B.ACCOUNTNUMBER,
+                    B.EODID,
+                    B.TOTALCBAMOUNT
+                  FROM
+                    (SELECT A.ACCOUNTNUMBER,
+                      A.EODID,
+                      A.TOTALCBAMOUNT,
+                      ROWNUM AS RN
+                    FROM
+                      (SELECT CBB.ACCOUNTNUMBER,
+                        CBB.EODID,
+                        CBB.TOTALCBAMOUNT
+                      FROM CASHBACK CBB
+                      WHERE CBB.ACCOUNTNUMBER = :accountNo
+                      ORDER BY CBB.EODID DESC
+                      ) A
+                    ) B
+                  WHERE B.RN=1
+                  ) CB
+                ON CA.ACCOUNTNO             = CB.ACCOUNTNUMBER
+                WHERE CA.STATUS             = 'DEA'
+                AND CA.ACCOUNTNO            = :accountNo
+                AND CA.CASHBACKPROFILECODE IS NOT NULL
+                ) A
+              ) CB
+            LEFT JOIN
+              (SELECT AB.ACCOUNTNO,
+                CASE
+                  WHEN AB.AVLCASHBACKAMOUNT < AB.MINACCUMULATEDTOCLAIM
+                  THEN 0
+                  WHEN (AB.REDEEMABLEAMOUNT   + AB.REDEEMEDAMOUNT) > AB.MAXCASHBACKPERYEAR
+                  THEN (AB.MAXCASHBACKPERYEAR - AB.REDEEMEDAMOUNT)
+                  ELSE AB.REDEEMABLEAMOUNT
+                END AS REDEEMABLECASHBACK
+              FROM
+                (SELECT CA.ACCOUNTNO,
+                  (FLOOR(NVL(CA.AVLCASHBACKAMOUNT,0)/NVL(CBP.REDEEMRATIO ,0))*NVL(CBP.REDEEMRATIO ,0) ) AS REDEEMABLEAMOUNT,
+                  NVL(AA.REDEEMEDAMOUNT,0)                                                              AS REDEEMEDAMOUNT,
+                  NVL(CBP.MAXCASHBACKPERYEAR,0)                                                         AS MAXCASHBACKPERYEAR,
+                  NVL(CBP.MINACCUMULATEDTOCLAIM,0)                                                      AS MINACCUMULATEDTOCLAIM,
+                  NVL(CA.AVLCASHBACKAMOUNT,0)                                                           AS AVLCASHBACKAMOUNT
+                FROM CARDACCOUNT CA
+                INNER JOIN CASHBACKPROFILE CBP
+                ON CA.CASHBACKPROFILECODE = CBP.PROFILECODE
+                LEFT JOIN
+                  (SELECT CER.ACCOUNTNUMBER,
+                    SUM(NVL(CER.AMOUNT,0)) AS REDEEMEDAMOUNT
+                  FROM CASHBACKEXPREDEEM CER
+                  INNER JOIN CARDACCOUNT CAC
+                  ON CER.ACCOUNTNUMBER    = CAC.ACCOUNTNO
+                  WHERE CER.ACCOUNTNUMBER = :accountNo
+                  AND CER.STATUS          = 0
+                  AND TRUNC(CER.EODDATE) >= TRUNC(CAC.CASHBACKSTARTDATE)
+                  GROUP BY CER.ACCOUNTNUMBER
+                  ) AA ON CA.ACCOUNTNO = AA.ACCOUNTNUMBER
+                WHERE CA.ACCOUNTNO     = :accountNo
+                ) AB
+              WHERE AB.ACCOUNTNO       = :accountNo
+              ) AA ON CB.ACCOUNTNUMBER = AA.ACCOUNTNO
+            LEFT JOIN
+              (SELECT CA.ACCOUNTNO,
+                CA.AVLCASHBACKAMOUNT,
+                CA.CASHBACKSTARTDATE,
+                CA.CBDEBITACCOUNTNAME AS CBACCOUNTNAME,
+                CA.CBDEBITACCOUNTNO   AS CBACCOUNTNO
+              FROM CARDACCOUNT CA
+              WHERE CA.ACCOUNTNO = :accountNo
+              ) BB
+            ON CB.ACCOUNTNUMBER = BB.ACCOUNTNO
+            LEFT JOIN
+              (SELECT C.ACCOUNTNUMBER,
+                C.EODID,
+                C.TOTALCBAMOUNT
+              FROM
+                (SELECT B.ACCOUNTNUMBER,
+                  B.EODID,
+                  B.TOTALCBAMOUNT
+                FROM
+                  (SELECT A.ACCOUNTNUMBER,
+                    A.EODID,
+                    A.TOTALCBAMOUNT,
+                    ROWNUM AS RN
+                  FROM
+                    (SELECT CBB.ACCOUNTNUMBER,
+                      CBB.EODID,
+                      CBB.TOTALCBAMOUNT
+                    FROM CASHBACK CBB
+                    WHERE CBB.ACCOUNTNUMBER = :accountNo
+                    ORDER BY CBB.EODID DESC
+                    ) A
+                  ) B
+                WHERE B.RN=2
+                ) C
+              ) CC
+            ON CB.ACCOUNTNUMBER    = CC.ACCOUNTNUMBER
+            WHERE CB.ACCOUNTNUMBER = :accountNo
             ) A
-          ) B
-        WHERE B.RN=2
-        ) C
-      ) CC
-    ON CB.ACCOUNTNUMBER    = CC.ACCOUNTNUMBER
-    WHERE CB.ACCOUNTNUMBER = :accountNo
-    ) A
-  ) AA ON CAC.ACCOUNTNO = AA.ACCOUNTNUMBER
-WHERE CAC.ACCOUNTNO     =:accountNo
-ORDER BY
-  CASE
-    WHEN CARDCATEGORYCODE = 'M'
-    OR CARDCATEGORYCODE   = 'E'
-    OR CARDCATEGORYCODE   = 'F'
-    OR CARDCATEGORYCODE   = 'A'
-    OR CARDCATEGORYCODE   = 'CO'
-    THEN 1
-    WHEN CARDCATEGORYCODE = 'S'
-    OR CARDCATEGORYCODE   = 'C'
-    OR CARDCATEGORYCODE   = 'FS'
-    OR CARDCATEGORYCODE   = 'AS'
-    OR CARDCATEGORYCODE   = 'COS'
-    THEN 2
-    ELSE 3
-  END,
-  CAC.CARDNUMBER,
-  SETTLEMENTDATE,
-  TRANSACTIONDATE'''
+          ) AA ON CAC.ACCOUNTNO = AA.ACCOUNTNUMBER
+        WHERE CAC.ACCOUNTNO     =:accountNo
+        ORDER BY
+          CASE
+            WHEN CARDCATEGORYCODE = 'M'
+            OR CARDCATEGORYCODE   = 'E'
+            OR CARDCATEGORYCODE   = 'F'
+            OR CARDCATEGORYCODE   = 'A'
+            OR CARDCATEGORYCODE   = 'CO'
+            THEN 1
+            WHEN CARDCATEGORYCODE = 'S'
+            OR CARDCATEGORYCODE   = 'C'
+            OR CARDCATEGORYCODE   = 'FS'
+            OR CARDCATEGORYCODE   = 'AS'
+            OR CARDCATEGORYCODE   = 'COS'
+            THEN 2
+            ELSE 3
+          END,
+          CAC.CARDNUMBER,
+          SETTLEMENTDATE,
+          TRANSACTIONDATE '''
+
         df = pd.read_sql(query, con=conEngine(),
                          params={"accountNo": int(accountNo), "startEodID": int(startEodID), "endEodID": int(endEodID),
                                  "feeCashAdType": CASH_ADVANCE_FEE})
@@ -468,37 +397,47 @@ ORDER BY to_date(effectdate) ASC'''
 
 def get_data_for_subreport_two(cardno):
     try:
-        query = '''SELECT to_date(cf.effectdate,'DD-MM-YYYY')AS effectdate,
+
+        query = '''SELECT * FROM(SELECT TO_DATE(CF.EFFECTDATE,'DD-MM-YYYY')AS EFFECTDATE,
   CASE
     WHEN CF.STATUS = 'BCCP'
     THEN NULL
-    WHEN CF.feetype=:feeCashAdType
+    WHEN CF.FEETYPE=:feeCashAdType
     THEN NULL
-    ELSE cf.feeamount
-  END AS FEEAMOUNT ,
-  f.description ,
+    ELSE CF.FEEAMOUNT
+  END AS FEEAMOUNT,
+  F.DESCRIPTION ,
   CF.CARDNUMBER,
-  cf.status,
-  EI.CARDNO,
-  ei.forwardinterest AS INTERREST
-FROM eodcardfee CF
-LEFT JOIN fee f
-ON (cf.feetype = f.feecode)
-FULL OUTER JOIN EOMINTEREST EI
-ON EI.CARDNO          = CF.CARDNUMBER
-WHERE (EI.CARDNO          = :cardno) or (cf.cardnumber=:cardno)
-ORDER BY to_date(effectdate) ASC'''
+  CF.STATUS
+FROM EODCARDFEE CF
+LEFT JOIN FEE F
+ON (CF.FEETYPE = F.FEECODE)
+WHERE (CF.CARDNUMBER=:cardno)
+ORDER BY (EFFECTDATE) ASC)T1 FULL OUTER JOIN (SELECT
+    EI.CARDNO,
+    EI.FORWARDINTEREST AS INTERREST
+FROM
+    EOMINTEREST EI
+WHERE
+    (EI.CARDNO = :cardno)
+)T2 ON T1.CARDNUMBER=T2.CARDNO '''
 
         df = pd.read_sql(query, con=conEngine(), params={"cardno": int(cardno), "feeCashAdType": CASH_ADVANCE_FEE})
+
         return df
 
     except Exception as err:
         app.logger.error('Error while getting data from sub report two {}'.format(str(err)))
 
-def get_data_for_subreport_one(cardno):
+def get_data_for_subreport_one(cardno, statementEndDate):
+
+    statementEndDate = statementEndDate
+    statement_date = datetime.strptime(statementEndDate, '%Y-%m-%d')
+
     try:
-        query = '''select crdr,amount,ADJUSTDATE,remarks,UNIQUEID from ADJUSTMENT where UNIQUEID = :cardno  and EODSTATUS = 'EDON' order by adjustdate'''
-        df = pd.read_sql(query, con=conEngine(), params={"cardno": int(cardno)})
+        # query = '''select crdr,amount,ADJUSTDATE,remarks,UNIQUEID from ADJUSTMENT where UNIQUEID = :cardno  and EODSTATUS = 'EDON' order by adjustdate'''
+        query = '''select crdr,amount,ADJUSTDATE,remarks,UNIQUEID from ADJUSTMENT where UNIQUEID = :cardno  and EODSTATUS = 'EDON' and TRUNC(adjustdate) <=TRUNC(:statementenddate) order by adjustdate'''
+        df = pd.read_sql(query, con=conEngine(), params={"cardno": int(cardno), "statementenddate": statement_date})
         return df
 
     except Exception as err:
