@@ -23,10 +23,10 @@ def totalStmtGenerationCount():
         return count
 
     except Exception as err:
-        app.logger.error('Error in Customer Statement controller {}'.format(str(err)))
+        app.logger.error('Error in Customer Statement Count Method {}'.format(str(err)))
 
 
-def getStatementIdsForStatementFileCreation(start, end):
+def getStatementIdsForStatementFileCreation():
 
     global status, df2
 
@@ -39,7 +39,7 @@ def getStatementIdsForStatementFileCreation(start, end):
         return df2
 
     except Exception as err:
-        app.logger.error('Error in Statement Generation controller {}'.format(str(err)))
+        app.logger.error('Error in Get Statement Ids for file Creation Method {}'.format(str(err)))
 
 def getdataFromMainQuery(statementid):
 
@@ -432,10 +432,11 @@ WHERE
 def get_data_for_subreport_one(cardno, statementEndDate):
 
     statementEndDate = statementEndDate
+
     statement_date = datetime.strptime(statementEndDate, '%Y-%m-%d')
 
     try:
-        # query = '''select crdr,amount,ADJUSTDATE,remarks,UNIQUEID from ADJUSTMENT where UNIQUEID = :cardno  and EODSTATUS = 'EDON' order by adjustdate'''
+
         query = '''select crdr,amount,ADJUSTDATE,remarks,UNIQUEID from ADJUSTMENT where UNIQUEID = :cardno  and EODSTATUS = 'EDON' and TRUNC(adjustdate) <=TRUNC(:statementenddate) order by adjustdate'''
         df = pd.read_sql(query, con=conEngine(), params={"cardno": int(cardno), "statementenddate": statement_date})
         return df
@@ -464,8 +465,102 @@ def updateStatus(statementid):
         con.close()
 
     except Exception as err:
-        app.logger.error('Error in customer controller {}'.format(str(err)))
+        app.logger.error('Error in update Billing Status {}'.format(str(err)))
 
+
+def UpdateEodCardFeeTableBillingDone(accountNo, statementEndDate):
+    # Convert the string to a datetime object
+    date_obj = datetime.strptime(statementEndDate, "%Y-%m-%d")
+
+    # Format the datetime object as '11-JUL-22'
+    formatted_date = date_obj.strftime("%d-%b-%y")
+
+    try:
+        con = conn()
+        cursor = con.cursor()
+
+        sql = ''' UPDATE EODCARDFEE SET STATUS='BCCP' WHERE ACCOUNTNO =:accountNo and STATUS = 'EDON' and effectdate <=:formatted_date '''
+
+        values = (accountNo, formatted_date)
+
+        cursor.execute(sql, values)
+
+        con.commit()
+        cursor.close()
+        con.close()
+
+    except Exception as err:
+        app.logger.error('Error in Update Eod Card Fee Table Billing Done {}'.format(str(err)))
+
+def UpdateAdjustmentTableBillingDone(accountNo, statementId, statementEndDate):
+    try:
+        con = conn()
+        cursor = con.cursor()
+
+        date_obj = datetime.strptime(statementEndDate, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%d-%b-%y")
+
+        sql = '''
+            UPDATE ADJUSTMENT
+            SET STATEMENTID = :statementId, EODSTATUS = 'BCCP'
+            WHERE UNIQUEID IN (SELECT cardnumber FROM cardaccountcustomer WHERE accountno = :accountNo)
+                AND EODSTATUS = 'EDON'
+                AND TRUNC(adjustdate) <= TRUNC(TO_DATE(:formatted_date, 'DD-MON-YY'))
+        '''
+
+        values = {
+            'accountNo': accountNo,
+            'statementId': statementId,
+            'formatted_date': formatted_date,
+        }
+
+        cursor.execute(sql, values)
+        con.commit()
+
+    except Exception as err:
+        app.logger.error('Error in Update Adjustment Table Billing Done {}'.format(str(err)))
+    finally:
+        if cursor:
+            cursor.close()
+        if con:
+            con.close()
+
+
+def InsertIntoDownloadTable(cardNo, statementId, accountNo):
+    statement = statementId + ".pdf"
+
+    try:
+        con = conn()
+        cursor = con.cursor()
+
+        sql = '''
+            INSERT INTO DOWNLOADFILE (
+                FIETYPE, FILENAME, LETTERTYPE, STATUS, GENERATEDUSER,
+                STATEMENTMONTH, STATEMENTYEAR, LASTUPDATEDTIME, CREATEDTIME,
+                LASTUPDATEDUSER, CARDTYPE, CARDPRODUCT, FILEID, ACCNUMBER,
+                APPLICATIONID, SUBFOLDER
+            ) VALUES (
+                'STATEMENT', :statement, ' ', 'YES', 'EOD',
+                '', '', SYSDATE, SYSDATE, 'EOD', '', '', :statement, :accountNo,
+                'EDON', ''
+            )
+        '''
+
+        values = {
+            'statement': statement,
+            'accountNo': accountNo,
+        }
+
+        cursor.execute(sql, values)
+        con.commit()
+
+    except Exception as err:
+        app.logger.error('Error in Insert Into Download Table: {}'.format(str(err)))
+    finally:
+        if cursor:
+            cursor.close()
+        if con:
+            con.close()
 
 def updateErrorFileStatus(statementid):
 
@@ -487,5 +582,5 @@ def updateErrorFileStatus(statementid):
         con.close()
 
     except Exception as err:
-        app.logger.error('Error in customer controller {}'.format(str(err)))
+        app.logger.error('Error in update Error Billing Status {}'.format(str(err)))
 

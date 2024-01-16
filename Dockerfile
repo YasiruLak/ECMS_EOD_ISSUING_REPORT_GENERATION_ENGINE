@@ -11,3 +11,6 @@ RUN pip install -r requirements.txt
 EXPOSE 6000
 
 CMD python app.py
+
+
+#FROM python:3
