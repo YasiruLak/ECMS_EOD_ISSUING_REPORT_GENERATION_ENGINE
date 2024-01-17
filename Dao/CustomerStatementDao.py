@@ -26,7 +26,7 @@ def totalStmtGenerationCount():
         app.logger.error('Error in Customer Statement Count Method {}'.format(str(err)))
 
 
-def getStatementIdsForStatementFileCreation():
+def getStatementIdsForStatementFileCreation(start, end):
 
     global status, df2
 
@@ -121,7 +121,7 @@ FROM
                 ORDER BY
                     cac.accountno ASC
             ) a
-    ) b'''
+    ) b WHERE B.RN BETWEEN ''' + str(start) + ''' AND ''' + str(end)
 
         df2 = pd.read_sql(query, con=conEngine())
 
