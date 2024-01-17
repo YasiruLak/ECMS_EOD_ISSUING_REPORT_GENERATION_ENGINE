@@ -433,126 +433,126 @@ def genarateCustomerStatement(statementid, eodDate, errorcount, successcount):
         # # Add white space (Spacer) with a height of 0.5 inch
         # elements.append(Spacer(1, 5 * inch))
 
-        # if df2['avlcbamount'][ind] is not None and int(df2['avlcbamount'][ind]) > 0:
-        account_footer_row1 = shapes.Drawing(row_width, 15)
-        string_txn_date = shapes.String(0 * inch, 0, 'CashBack Rewards', fontName="Helvetica-Bold", fontSize=8)
-        account_footer_row1.add(string_txn_date)
-        elements.append(account_footer_row1)
+        if df2['avlcbamount'][ind] is not None:
+            account_footer_row1 = shapes.Drawing(row_width, 15)
+            string_txn_date = shapes.String(0 * inch, 0, 'CashBack Rewards', fontName="Helvetica-Bold", fontSize=8)
+            account_footer_row1.add(string_txn_date)
+            elements.append(account_footer_row1)
 
-            # row 2
-        account_footer_row2 = shapes.Drawing(row_width, 15)
-        string_txn_date = shapes.String(0 * inch, 0, 'Opening Balance', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_txn_date)
+                # row 2
+            account_footer_row2 = shapes.Drawing(row_width, 15)
+            string_txn_date = shapes.String(0 * inch, 0, 'Opening Balance', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_txn_date)
 
-        string_cashback = shapes.String(1.5 * inch, 0, 'CashBack for this Statement', fontName="Helvetica",
-                                            fontSize=8)
-        account_footer_row2.add(string_cashback)
+            string_cashback = shapes.String(1.5 * inch, 0, 'CashBack for this Statement', fontName="Helvetica",
+                                                fontSize=8)
+            account_footer_row2.add(string_cashback)
 
-        string_redeemed = shapes.String(4 * inch, 0, 'Redeemed', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_redeemed)
+            string_redeemed = shapes.String(4 * inch, 0, 'Redeemed', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_redeemed)
 
-        string_expired = shapes.String(5 * inch, 0, 'Expired/Adjusted', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_expired)
+            string_expired = shapes.String(5 * inch, 0, 'Expired/Adjusted', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_expired)
 
-        string_ttl_cashback = shapes.String(6.5 * inch, 0, 'Total CashBack', fontName="Helvetica", fontSize=8)
-        account_footer_row2.add(string_ttl_cashback)
-        elements.append(account_footer_row2)
+            string_ttl_cashback = shapes.String(6.5 * inch, 0, 'Total CashBack', fontName="Helvetica", fontSize=8)
+            account_footer_row2.add(string_ttl_cashback)
+            elements.append(account_footer_row2)
 
-            # row 3
-        space = '            '
-        account_footer_row3 = shapes.Drawing(row_width, 15)
-            # $F{OPENNINGCASHBACK} == null ? 0 : $F{OPENNINGCASHBACK}
-        cashback = 0.00 if df2['openningcashback'][ind] is None else df2['openningcashback'][ind]
-        string_txn_date = shapes.String(0.25 * inch, 0, str(cashback) + space + '     +', fontName="Helvetica",
-                                            fontSize=8)
-        account_footer_row3.add(string_txn_date)
+                # row 3
+            space = '            '
+            account_footer_row3 = shapes.Drawing(row_width, 15)
+                # $F{OPENNINGCASHBACK} == null ? 0 : $F{OPENNINGCASHBACK}
+            cashback = 0.00 if df2['openningcashback'][ind] is None else df2['openningcashback'][ind]
+            string_txn_date = shapes.String(0.25 * inch, 0, str(cashback) + space + '     +', fontName="Helvetica",
+                                                fontSize=8)
+            account_footer_row3.add(string_txn_date)
 
-            # $F{CASHBACKAMOUNTWITHOUTADJ}
-        string_cashback = shapes.String(1.75 * inch, 0,
-                                            str(round(df2['cashbackamountwithoutadj'][ind], 2)) + space + '          -',
-                                            fontName="Helvetica",
-                                            fontSize=8)
-        account_footer_row3.add(string_cashback)
-
-        string_redeemed = shapes.String(4 * inch, 0,
-                                            str(round(df2['redeemtotalcb'][ind], 2)) + space + '      -',
-                                            fontName="Helvetica",
-                                            fontSize=8)
-        account_footer_row3.add(string_redeemed)
-
-            # $F{CBEXPAMOUNTWITHADJ}
-        string_expired = shapes.String(5.25 * inch, 0,
-                                           str(round(df2['cbexpamountwithadj'][ind], 2)) + space + '          =',
-                                           fontName="Helvetica",
-                                           fontSize=8)
-        account_footer_row3.add(string_expired)
-
-            # $F{AVLCBAMOUNT}avlcbamount
-        string_ttl_cashback = shapes.String(6.75 * inch, 0, str(round(df2['avlcbamount'][ind], 2)),
+                # $F{CASHBACKAMOUNTWITHOUTADJ}
+            string_cashback = shapes.String(1.75 * inch, 0,
+                                                str(df2['cashbackamountwithoutadj'][ind])+ space + '          -',
                                                 fontName="Helvetica",
                                                 fontSize=8)
-        account_footer_row3.add(string_ttl_cashback)
-        elements.append(account_footer_row3)
+            account_footer_row3.add(string_cashback)
 
-            # row 4
-        account_footer_row4 = shapes.Drawing(row_width, 30)
-        string_credited = shapes.String(0 * inch, 15, 'Total CashBack to be', fontName="Helvetica", fontSize=8)
-        string_txn_date = shapes.String(0.4 * inch, 0, 'credited', fontName="Helvetica", fontSize=8)
-        account_footer_row4.add(string_txn_date)
-        account_footer_row4.add(string_credited)
+            string_redeemed = shapes.String(4 * inch, 0,
+                                                str(df2['redeemtotalcb'][ind]) + space + '      -',
+                                                fontName="Helvetica",
+                                                fontSize=8)
+            account_footer_row3.add(string_redeemed)
 
-            # outstanding_ttl_rounded = round(outstanding_ttl, 2)
+                # $F{CBEXPAMOUNTWITHADJ}
+            string_expired = shapes.String(5.25 * inch, 0,
+                                               str(df2['cbexpamountwithadj'][ind]) + space + '          =',
+                                               fontName="Helvetica",
+                                               fontSize=8)
+            account_footer_row3.add(string_expired)
 
-            # redeem_cash_balane(round(df2['redeemablecashback'][ind],2))
-            # $F{REDEEMABLECASHBACK}
-        if df2['redeemablecashback'][ind] == 0 or df2['redeemablecashback'][ind] is None:
-                redeemablecashback = 0.00
-        else:
-                redeemablecashback = str(round(df2['redeemablecashback'][ind], 2))
+                # $F{AVLCBAMOUNT}avlcbamount
+            string_ttl_cashback = shapes.String(6.75 * inch, 0, str(df2['avlcbamount'][ind]),
+                                                    fontName="Helvetica",
+                                                    fontSize=8)
+            account_footer_row3.add(string_ttl_cashback)
+            elements.append(account_footer_row3)
 
-        string_redeemablecashback = shapes.String(1.5 * inch, 10,
-                                                      ":   " + str(redeemablecashback),
-                                                      fontName="Helvetica")
-        account_footer_row4.add(string_redeemablecashback)
-        elements.append(account_footer_row4)
+                # row 4
+            account_footer_row4 = shapes.Drawing(row_width, 30)
+            string_credited = shapes.String(0 * inch, 15, 'Total CashBack to be', fontName="Helvetica", fontSize=8)
+            string_txn_date = shapes.String(0.4 * inch, 0, 'credited', fontName="Helvetica", fontSize=8)
+            account_footer_row4.add(string_txn_date)
+            account_footer_row4.add(string_credited)
 
-            # row 5
-        account_footer_row5 = shapes.Drawing(row_width, 15)
-        string_cashback = shapes.String(0.3 * inch, 0, 'CashBack Credit Account', fontName="Helvetica-Bold",
-                                            fontSize=8)
-        account_footer_row5.add(string_cashback)
-        elements.append(account_footer_row5)
+                # outstanding_ttl_rounded = round(outstanding_ttl, 2)
 
-            # row 6
-        account_footer_row6 = shapes.Drawing(row_width, 15)
-            # df2['cbaccountname'][ind] == null ? "--" : df2['cbaccountname'][ind]
-        acc_holder = "--" if df2['cbaccountname'][ind] is None else df2['cbaccountname'][ind]
-        string_acc_holder = shapes.String(0.3 * inch, 0, 'Account Holder :  ' + acc_holder,
-                                              fontName="Helvetica-Bold",
-                                              fontSize=8)
-        account_footer_row6.add(string_acc_holder)
-        elements.append(account_footer_row6)
+                # redeem_cash_balane(round(df2['redeemablecashback'][ind],2))
+                # $F{REDEEMABLECASHBACK}
+            if df2['redeemablecashback'][ind] == 0 or df2['redeemablecashback'][ind] is None:
+                    redeemablecashback = 0.00
+            else:
+                    redeemablecashback = str(df2['redeemablecashback'][ind])
 
-            # row 7
-        account_footer_row7 = shapes.Drawing(row_width, 15)
-        acc_no = "--" if df2['cbaccountno'][ind] is None else df2['cbaccountno'][ind]
-        string_acc_holder = shapes.String(0.3 * inch, 0, 'Account No :  ' + acc_no, fontName="Helvetica-Bold",
-                                              fontSize=8)
-        account_footer_row7.add(string_acc_holder)
-        elements.append(account_footer_row7)
+            string_redeemablecashback = shapes.String(1.5 * inch, 10,
+                                                          ":   " + str(redeemablecashback),
+                                                          fontName="Helvetica")
+            account_footer_row4.add(string_redeemablecashback)
+            elements.append(account_footer_row4)
 
-            # row 8
-        account_footer_row8 = shapes.Drawing(row_width, 15)
-        string_acc_holder = shapes.String(0.3 * inch, 0,
-                                              'Total CashBack amount indicated above will be credited within 30 days. '
-                                              'Conditions apply.',
-                                              fontName="Helvetica-Bold", fontSize=8)
-        account_footer_row8.add(string_acc_holder)
-        elements.append(account_footer_row8)
+                # row 5
+            account_footer_row5 = shapes.Drawing(row_width, 15)
+            string_cashback = shapes.String(0.3 * inch, 0, 'CashBack Credit Account', fontName="Helvetica-Bold",
+                                                fontSize=8)
+            account_footer_row5.add(string_cashback)
+            elements.append(account_footer_row5)
+
+                # row 6
+            account_footer_row6 = shapes.Drawing(row_width, 15)
+                # df2['cbaccountname'][ind] == null ? "--" : df2['cbaccountname'][ind]
+            acc_holder = "--" if df2['cbaccountname'][ind] is None else df2['cbaccountname'][ind]
+            string_acc_holder = shapes.String(0.3 * inch, 0, 'Account Holder :  ' + acc_holder,
+                                                  fontName="Helvetica-Bold",
+                                                  fontSize=8)
+            account_footer_row6.add(string_acc_holder)
+            elements.append(account_footer_row6)
+
+                # row 7
+            account_footer_row7 = shapes.Drawing(row_width, 15)
+            acc_no = "--" if df2['cbaccountno'][ind] is None else df2['cbaccountno'][ind]
+            string_acc_holder = shapes.String(0.3 * inch, 0, 'Account No :  ' + acc_no, fontName="Helvetica-Bold",
+                                                  fontSize=8)
+            account_footer_row7.add(string_acc_holder)
+            elements.append(account_footer_row7)
+
+                # row 8
+            account_footer_row8 = shapes.Drawing(row_width, 15)
+            string_acc_holder = shapes.String(0.3 * inch, 0,
+                                                  'Total CashBack amount indicated above will be credited within 30 days. '
+                                                  'Conditions apply.',
+                                                  fontName="Helvetica-Bold", fontSize=8)
+            account_footer_row8.add(string_acc_holder)
+            elements.append(account_footer_row8)
             # end cashback
 
-        # # Add white space (Spacer) with a height of 0.5 inch
-        # elements.append(Spacer(1, 5 * inch))
+        # Add white space (Spacer) with a height of 0.5 inch
+        elements.append(Spacer(1, 0.5 * inch))
         #
         # # Add a Spacer to push the footer to the bottom
         # footer_height = 1.0 * inch  # Adjust the height as needed

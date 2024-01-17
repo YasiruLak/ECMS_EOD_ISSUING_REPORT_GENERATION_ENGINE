@@ -32,7 +32,96 @@ def getStatementIdsForStatementFileCreation():
 
     try:
 
-        query = ''' SELECT STATEMENTID AS stmtid FROM BILLINGSTATEMENT WHERE STATEMENTGENERATEDSTATUS IN (0,2)  '''
+        query = ''' SELECT
+    b.STATEMENTID  AS stmtid
+FROM
+    (
+        SELECT
+            ROWNUM rn,
+            a.*
+        FROM
+            (
+                SELECT DISTINCT
+                    cac.accountno,
+                    bls.*,
+                    cac.isprimary,
+                    (
+                        SELECT
+                            cardcategorycode
+                        FROM
+                            card
+                        WHERE
+                            cardnumber = cac.cardnumber
+                    )                          AS cardcategorycode,
+                    (
+                        SELECT
+                            messageonstmt
+                        FROM
+                            allocationmessage,
+                            triggercards
+                        WHERE
+                                triggercards.cardno = bs.cardno
+                            AND triggercards.lasttriggerpoint = allocationmessage.triggerpoint
+                            AND allocationmessage.triggerpoint IN ( 'O3SD', 'O2SD', 'O4SD' )
+                            AND allocationmessage.status = 'ACT'
+                    )                          AS triggermsg,
+                    bs.statementid             AS stmtid,
+                    bs.creditlimit,
+                    bs.statementgeneratedstatus,
+                    nvl(bs.purchases, 0.00)    AS purchases,
+                    nvl(bs.dradjustment, 0.00) AS dradjustment,
+                    nvl(bs.cradjustment, 0.00) AS cradjustment,
+                    nvl(bs.cashadvance, 0.00)  AS cashadvance,
+                    nvl(bs.interest, 0.00)     AS interest,
+                    nvl(bs.charges, 0.00)      AS charges,
+                    bs.starteodid,
+                    bs.endeodid,
+                    ca.statementsentoption,
+                    (
+                        CASE
+                            WHEN bs.cardcategorycode IN ( 'M', 'A', 'CO' ) THEN
+                                (
+                                    SELECT
+                                        mobileno
+                                    FROM
+                                        cardmaincustomerdetail
+                                    WHERE
+                                        customerid = cac.customerid
+                                )
+                            WHEN bs.cardcategorycode = 'F' THEN
+                                (
+                                    SELECT
+                                        mobileno
+                                    FROM
+                                        cardfdcustomerdetail
+                                    WHERE
+                                        customerid = cac.customerid
+                                )
+                            WHEN bs.cardcategorycode = 'E' THEN
+                                (
+                                    SELECT
+                                        contactnumbersmobile
+                                    FROM
+                                        cardestcustomerdetails
+                                    WHERE
+                                        customerid = cac.customerid
+                                )
+                        END
+                    )                          AS mobileno
+                FROM
+                    billingstatement            bs,
+                    billinglaststatementsummary bls,
+                    cardaccount                 ca,
+                    cardaccountcustomer         cac
+                WHERE
+                    bs.statementgeneratedstatus IN (0,2)
+                    AND bs.cardno = bls.cardno
+                    AND bs.accountno = ca.accountno
+                    AND cac.cardnumber = bs.cardno
+                ORDER BY
+                    cac.accountno ASC
+            ) a
+    ) b'''
 
         df2 = pd.read_sql(query, con=conEngine())
 
